@@ -64,6 +64,12 @@ func mainLoop(t time.Duration) {
 	display.Blit(makeTilde(45, 20, green, empty), 300, 40)
 	display.Blit(makeTilde(45, 20, purple, line), 300, 70)
 
+	display.Blit(makeTilde(45, 20, red, solid), 10, 550)
+	display.DrawRect(geo.Rect{X: 10, Y: 550, W: 45, H: 20}, &gogame.StrokeStyle{
+		Colorer: gogame.White,
+		Width:   1,
+	})
+
 	display.Flip()
 }
 
@@ -127,11 +133,11 @@ func makeDimond(w, h float64, color gogame.Color, f fill) gogame.Surface {
 func makeTilde(w, h float64, color gogame.Color, f fill) gogame.Surface {
 	s := gogame.NewSurface(int(w), int(h))
 	points := [][2]float64{
-		{0, h / 2}, {0, h/2 - h}, {w - w/4 - w/10, h/8 + h},
+		{w * 0.05, h / 2}, {w * 0.15, h/2 - h}, {w - w/4 - w/10, h/8 + h},
 		{w - w/4, h / 8}, {w - w/4 + w/10, h/8 - h}, {w, h/2 - h},
-		{w, h / 2}, {w, h/2 + h}, {w/4 + w/10, h - h/8 - h},
-		{w / 4, h - h/8}, {w/4 - w/10, h - h/8 + h}, {0, h/2 + h},
-		{0, h / 2},
+		{w, h / 2}, {w, h/2 + h}, {w/4 + w/10, h - h/8 - h*0.3},
+		{w * 0.2, h - h/8}, {w/4 - w/10, h}, {-w * 0.01, h},
+		{w * 0.05, h / 2},
 	}
 	if f == solid {
 		s.DrawBezierCurves(points, &gogame.FillStyle{Colorer: color})
