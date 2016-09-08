@@ -48,32 +48,34 @@ func mainLoop(t time.Duration) {
 	}
 	display := gogame.MainDisplay()
 	display.Fill(gogame.FillBlack)
-	oval := makeOval(45, 20, red, solid)
-	display.Blit(oval, 10, 10)
-	oval2 := makeOval(45, 20, green, empty)
-	display.Blit(oval2, 10, 40)
-	oval3 := makeOval(45, 20, purple, line)
-	display.Blit(oval3, 10, 70)
 
-	oval4 := makeOval(100, 50, red, solid)
-	display.Blit(oval4, 100, 10)
-	oval5 := makeOval(100, 50, green, empty)
-	display.Blit(oval5, 100, 70)
-	oval6 := makeOval(100, 50, purple, line)
-	display.Blit(oval6, 100, 130)
+	display.Blit(makeOval(45, 20, red, solid), 10, 10)
+	display.Blit(makeOval(45, 20, green, empty), 10, 40)
+	display.Blit(makeOval(45, 20, purple, line), 10, 70)
+	display.Blit(makeOval(100, 50, red, solid), 100, 10)
+	display.Blit(makeOval(100, 50, green, empty), 100, 70)
+	display.Blit(makeOval(100, 50, purple, line), 100, 130)
+
+	display.Blit(makeDimond(45, 20, red, solid), 220, 10)
+	display.Blit(makeDimond(45, 20, green, empty), 220, 40)
+	display.Blit(makeDimond(45, 20, purple, line), 220, 70)
+
+	display.Blit(makeTilde(45, 20, red, solid), 300, 10)
+	display.Blit(makeTilde(45, 20, green, empty), 300, 40)
+	display.Blit(makeTilde(45, 20, purple, line), 300, 70)
 
 	display.Flip()
 }
 
-func makeOval(w, h int, color gogame.Color, f fill) gogame.Surface {
-	s := gogame.NewSurface(w, h)
+func makeOval(w, h float64, color gogame.Color, f fill) gogame.Surface {
+	s := gogame.NewSurface(int(w), int(h))
 	if f == solid {
 		style := &gogame.FillStyle{
 			Colorer: color,
 		}
-		s.DrawRect(geo.Rect{X: float64(h) / 2, Y: 0, W: float64(w) - float64(h), H: float64(h)}, style)
-		s.DrawArc(geo.Rect{X: 0, Y: 0, W: float64(h), H: float64(h)}, math.Pi/2, 3*math.Pi/2, style)
-		s.DrawArc(geo.Rect{X: float64(w - h), Y: 0, W: float64(h), H: float64(h)}, -math.Pi/2, math.Pi/2, style)
+		s.DrawRect(geo.Rect{X: h / 2, Y: 0, W: w - h, H: h}, style)
+		s.DrawArc(geo.Rect{X: 0, Y: 0, W: h, H: h}, math.Pi/2, 3*math.Pi/2, style)
+		s.DrawArc(geo.Rect{X: w - h, Y: 0, W: h, H: h}, -math.Pi/2, math.Pi/2, style)
 	} else {
 		style := &gogame.StrokeStyle{
 			Colorer: color,
@@ -81,29 +83,83 @@ func makeOval(w, h int, color gogame.Color, f fill) gogame.Surface {
 		}
 		if f == line {
 			s.Blit(makeLines(w, h, style), 0, 0)
-			mask := gogame.NewSurface(w, h)
-			mask.DrawRect(geo.Rect{X: float64(h) / 2, Y: 0, W: float64(w) - float64(h), H: float64(h)}, gogame.FillWhite)
-			mask.DrawArc(geo.Rect{X: 0, Y: 0, W: float64(h), H: float64(h)}, math.Pi/2, 3*math.Pi/2, gogame.FillWhite)
-			mask.DrawArc(geo.Rect{X: float64(w - h), Y: 0, W: float64(h), H: float64(h)}, -math.Pi/2, math.Pi/2, gogame.FillWhite)
+			mask := gogame.NewSurface(int(w), int(h))
+			mask.DrawRect(geo.Rect{X: h / 2, Y: 0, W: w - h, H: h}, gogame.FillWhite)
+			mask.DrawArc(geo.Rect{X: 0, Y: 0, W: h, H: h}, math.Pi/2, 3*math.Pi/2, gogame.FillWhite)
+			mask.DrawArc(geo.Rect{X: w - h, Y: 0, W: h, H: h}, -math.Pi/2, math.Pi/2, gogame.FillWhite)
 			s.BlitComp(mask, 0, 0, composite.DestinationIn)
 		}
-		s.DrawLine(float64(h)/2, 1, float64(w)-float64(h)/2, 1, style)
-		s.DrawLine(float64(h)/2, float64(h)-1, float64(w)-float64(h)/2, float64(h)-1, style)
-		s.DrawArc(geo.Rect{X: 1, Y: 1, W: float64(h), H: float64(h) - 2}, math.Pi/2, 3*math.Pi/2, style)
-		s.DrawArc(geo.Rect{X: float64(w-h) - 1, Y: 1, W: float64(h), H: float64(h) - 2}, -math.Pi/2, math.Pi/2, style)
+		s.DrawLine(h/2, 1, w-h/2, 1, style)
+		s.DrawLine(h/2, h-1, w-h/2, h-1, style)
+		s.DrawArc(geo.Rect{X: 1, Y: 1, W: h, H: h - 2}, math.Pi/2, 3*math.Pi/2, style)
+		s.DrawArc(geo.Rect{X: w - h - 1, Y: 1, W: h, H: h - 2}, -math.Pi/2, math.Pi/2, style)
 	}
 	return s
 }
 
-func makeLines(w, h int, style *gogame.StrokeStyle) gogame.Surface {
-	s := gogame.NewSurface(w, h)
+func makeDimond(w, h float64, color gogame.Color, f fill) gogame.Surface {
+	s := gogame.NewSurface(int(w), int(h))
+	points := [][2]float64{
+		{w / 2, 0},
+		{w, h / 2},
+		{w / 2, h},
+		{0, h / 2},
+		{w / 2, 0},
+	}
+	if f == solid {
+		s.DrawLines(points, &gogame.FillStyle{Colorer: color})
+	} else {
+		style := &gogame.StrokeStyle{
+			Colorer: color,
+			Width:   0.03 * w,
+		}
+		if f == line {
+			s.Blit(makeLines(w, h, style), 0, 0)
+			mask := gogame.NewSurface(int(w), int(h))
+			mask.DrawLines(points, gogame.FillWhite)
+			s.BlitComp(mask, 0, 0, composite.DestinationIn)
+		}
+		s.DrawLines(points, style)
+	}
+	return s
+}
+
+func makeTilde(w, h float64, color gogame.Color, f fill) gogame.Surface {
+	s := gogame.NewSurface(int(w), int(h))
+	points := [][2]float64{
+		{0, h / 2}, {0, h/2 - h}, {w - w/4 - w/10, h/8 + h},
+		{w - w/4, h / 8}, {w - w/4 + w/10, h/8 - h}, {w, h/2 - h},
+		{w, h / 2}, {w, h/2 + h}, {w/4 + w/10, h - h/8 - h},
+		{w / 4, h - h/8}, {w/4 - w/10, h - h/8 + h}, {0, h/2 + h},
+		{0, h / 2},
+	}
+	if f == solid {
+		s.DrawBezierCurves(points, &gogame.FillStyle{Colorer: color})
+	} else {
+		style := &gogame.StrokeStyle{
+			Colorer: color,
+			Width:   0.03 * float64(w),
+		}
+		if f == line {
+			s.Blit(makeLines(w, h, style), 0, 0)
+			mask := gogame.NewSurface(int(w), int(h))
+			mask.DrawBezierCurves(points, gogame.FillWhite)
+			s.BlitComp(mask, 0, 0, composite.DestinationIn)
+		}
+		s.DrawBezierCurves(points, style)
+	}
+	return s
+}
+
+func makeLines(w, h float64, style *gogame.StrokeStyle) gogame.Surface {
+	s := gogame.NewSurface(int(w), int(h))
 	wf := float64(w)
 	for x := 0.1 * wf; x < wf; x += 0.1 * wf {
 		xx := x
 		if int(math.Ceil(style.Width))%2 != 0 {
 			xx = math.Floor(x) + 0.5
 		}
-		s.DrawLine(xx, 0, xx, float64(h), style)
+		s.DrawLine(xx, 0, xx, h, style)
 	}
 	return s
 }
