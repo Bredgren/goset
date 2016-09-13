@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 	"time"
@@ -20,7 +21,13 @@ func main() {
 	}()
 }
 
-var deck []card
+var state = struct {
+	deck          []card
+	gameState     gameState
+	playStartTime time.Duration
+}{
+	gameState: menuState,
+}
 
 func setup() {
 	width, height := 500, 1350
@@ -43,14 +50,26 @@ func makeAndShuffleDeck() {
 			}
 		}
 	}
-	deck = make([]card, len(tmpDeck))
+	state.deck = make([]card, len(tmpDeck))
 	order := rand.Perm(len(tmpDeck))
 	for i, pos := range order {
-		deck[i] = tmpDeck[pos]
+		state.deck[i] = tmpDeck[pos]
 	}
 }
 
 func mainLoop(t time.Duration) {
+	switch state.gameState {
+	case menuState:
+		state.playStartTime = t
+		state.gameState = playState
+	case playState:
+		handlePlayStateLoop(t)
+	case gameOverState:
+	case leaderboardState:
+	}
+}
+
+func handlePlayStateLoop(t time.Duration) {
 	for evt := event.Poll(); evt.Type != event.NoEvent; evt = event.Poll() {
 		switch evt.Type {
 		case event.Quit:
@@ -69,21 +88,39 @@ func mainLoop(t time.Duration) {
 			// data := evt.Data.(event.MouseMotionData)
 		}
 	}
+
 	display := gogame.MainDisplay()
 	display.Fill(gogame.FillBlack)
+	drawPlayTime(display, t)
 
-	w, h := 60.0, 100.0
-	x, y := 10.0, 10.0
-	for _, card := range deck {
-		display.Blit(card.surface(w, h), x, y)
-		x += w + 10
-		if x+w > float64(display.Width()) {
-			y += h + 10
-			x = 10
-		}
-	}
+	// w, h := 60.0, 100.0
+	// x, y := 10.0, 10.0
+	// for _, card := range state.deck {
+	// 	display.Blit(card.surface(w, h), x, y)
+	// 	x += w + 10
+	// 	if x+w > float64(display.Width()) {
+	// 		y += h + 10
+	// 		x = 10
+	// 	}
+	// }
 
 	display.Flip()
+}
+
+func drawPlayTime(display gogame.Surface, t time.Duration) {
+	// TODO: option to hide the time
+	timeString := fmt.Sprintf("%.0f", (t - state.playStartTime).Seconds())
+	font := gogame.Font{
+		Size:   20,
+		Family: gogame.FontFamilyMonospace,
+	}
+	style := gogame.TextStyle{
+		Colorer:  gogame.White,
+		Type:     gogame.Fill,
+		Align:    gogame.TextAlignLeft,
+		Baseline: gogame.TextBaselineTop,
+	}
+	display.DrawText(timeString, 10, 10, &font, &style)
 }
 
 func makeOval(w, h float64, c color, f fill) gogame.Surface {
@@ -261,3 +298,12 @@ func (c *card) surface(w, h float64) gogame.Surface {
 	}
 	return surf
 }
+
+type gameState int
+
+const (
+	menuState gameState = iota
+	playState
+	gameOverState
+	leaderboardState
+)
