@@ -25,6 +25,8 @@ var state = struct {
 	deck          []card
 	gameState     gameState
 	playStartTime time.Duration
+	activeCards   [16]card
+	selectedCards [3]int
 }{
 	gameState: menuState,
 }
@@ -36,7 +38,6 @@ func setup() {
 	display.Fill(gogame.FillBlack)
 	display.Flip()
 	rand.Seed(time.Now().UnixNano())
-	makeAndShuffleDeck()
 }
 
 func makeAndShuffleDeck() {
@@ -60,13 +61,22 @@ func makeAndShuffleDeck() {
 func mainLoop(t time.Duration) {
 	switch state.gameState {
 	case menuState:
-		state.playStartTime = t
-		state.gameState = playState
+		gotoPlayState(t)
 	case playState:
 		handlePlayStateLoop(t)
 	case gameOverState:
 	case leaderboardState:
 	}
+}
+
+func gotoPlayState(t time.Duration) {
+	state.playStartTime = t
+	state.gameState = playState
+	makeAndShuffleDeck()
+	for i := 0; i < len(state.activeCards); i++ {
+		state.activeCards[i] = state.deck[i]
+	}
+	state.deck = state.deck[len(state.activeCards):]
 }
 
 func handlePlayStateLoop(t time.Duration) {
@@ -92,6 +102,7 @@ func handlePlayStateLoop(t time.Duration) {
 	display := gogame.MainDisplay()
 	display.Fill(gogame.FillBlack)
 	drawPlayTime(display, t)
+	drawActiveCards(display)
 
 	// w, h := 60.0, 100.0
 	// x, y := 10.0, 10.0
@@ -121,6 +132,19 @@ func drawPlayTime(display gogame.Surface, t time.Duration) {
 		Baseline: gogame.TextBaselineTop,
 	}
 	display.DrawText(timeString, 10, 10, &font, &style)
+}
+
+func drawActiveCards(display gogame.Surface) {
+	w, h := 70.0, 100.0
+	x, y := 50.0, 50.0
+	for i, card := range state.activeCards {
+		display.Blit(card.surface(w, h), x, y)
+		x += w + 10
+		if (i+1)%4 == 0 {
+			y += h + 10
+			x = 50
+		}
+	}
 }
 
 func makeOval(w, h float64, c color, f fill) gogame.Surface {
@@ -177,6 +201,11 @@ func makeDimond(w, h float64, c color, f fill) gogame.Surface {
 			mask.DrawLines(points, gogame.FillWhite)
 			s.BlitComp(mask, 0, 0, composite.DestinationIn)
 		}
+		points[0][1] += style.Width / 2
+		points[1][0] -= style.Width / 2
+		points[2][1] -= style.Width / 2
+		points[3][0] += style.Width / 2
+		points[4][1] += style.Width / 2
 		s.DrawLines(points, style)
 	}
 	return s
