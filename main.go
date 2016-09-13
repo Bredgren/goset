@@ -2,6 +2,7 @@ package main
 
 import (
 	"math"
+	"math/rand"
 	"time"
 
 	"github.com/Bredgren/gogame"
@@ -19,12 +20,34 @@ func main() {
 	}()
 }
 
+var deck []card
+
 func setup() {
-	width, height := 500, 700
+	width, height := 500, 1350
 	display := gogame.MainDisplay()
 	display.SetMode(width, height)
 	display.Fill(gogame.FillBlack)
 	display.Flip()
+	rand.Seed(time.Now().UnixNano())
+	makeAndShuffleDeck()
+}
+
+func makeAndShuffleDeck() {
+	tmpDeck := []card{}
+	for _, n := range []count{one, two, three} {
+		for _, f := range []fill{empty, solid, line} {
+			for _, c := range []color{red, green, purple} {
+				for _, s := range []shape{oval, dimond, tilde} {
+					tmpDeck = append(tmpDeck, card{count: n, fill: f, color: c, shape: s})
+				}
+			}
+		}
+	}
+	deck = make([]card, len(tmpDeck))
+	order := rand.Perm(len(tmpDeck))
+	for i, pos := range order {
+		deck[i] = tmpDeck[pos]
+	}
 }
 
 func mainLoop(t time.Duration) {
@@ -49,41 +72,16 @@ func mainLoop(t time.Duration) {
 	display := gogame.MainDisplay()
 	display.Fill(gogame.FillBlack)
 
-	display.Blit(makeCard(60, 100, one, empty, red, oval), 10, 10)
-	display.Blit(makeCard(60, 100, two, empty, red, oval), 80, 10)
-	display.Blit(makeCard(60, 100, three, empty, red, oval), 150, 10)
-
-	display.Blit(makeCard(60, 100, one, solid, red, oval), 10, 120)
-	display.Blit(makeCard(60, 100, two, solid, red, oval), 80, 120)
-	display.Blit(makeCard(60, 100, three, solid, red, oval), 150, 120)
-
-	display.Blit(makeCard(60, 100, one, line, red, oval), 10, 230)
-	display.Blit(makeCard(60, 100, two, line, red, oval), 80, 230)
-	display.Blit(makeCard(60, 100, three, line, red, oval), 150, 230)
-
-	display.Blit(makeCard(60, 100, one, empty, green, dimond), 220, 10)
-	display.Blit(makeCard(60, 100, two, empty, green, dimond), 290, 10)
-	display.Blit(makeCard(60, 100, three, empty, green, dimond), 360, 10)
-
-	display.Blit(makeCard(60, 100, one, solid, green, dimond), 220, 120)
-	display.Blit(makeCard(60, 100, two, solid, green, dimond), 290, 120)
-	display.Blit(makeCard(60, 100, three, solid, green, dimond), 360, 120)
-
-	display.Blit(makeCard(60, 100, one, line, green, dimond), 220, 230)
-	display.Blit(makeCard(60, 100, two, line, green, dimond), 290, 230)
-	display.Blit(makeCard(60, 100, three, line, green, dimond), 360, 230)
-
-	display.Blit(makeCard(60, 100, one, empty, purple, tilde), 10, 340)
-	display.Blit(makeCard(60, 100, two, empty, purple, tilde), 80, 340)
-	display.Blit(makeCard(60, 100, three, empty, purple, tilde), 150, 340)
-
-	display.Blit(makeCard(60, 100, one, solid, purple, tilde), 10, 450)
-	display.Blit(makeCard(60, 100, two, solid, purple, tilde), 80, 450)
-	display.Blit(makeCard(60, 100, three, solid, purple, tilde), 150, 450)
-
-	display.Blit(makeCard(60, 100, one, line, purple, tilde), 10, 560)
-	display.Blit(makeCard(60, 100, two, line, purple, tilde), 80, 560)
-	display.Blit(makeCard(60, 100, three, line, purple, tilde), 150, 560)
+	w, h := 60.0, 100.0
+	x, y := 10.0, 10.0
+	for _, card := range deck {
+		display.Blit(card.surface(w, h), x, y)
+		x += w + 10
+		if x+w > float64(display.Width()) {
+			y += h + 10
+			x = 10
+		}
+	}
 
 	display.Flip()
 }
@@ -194,37 +192,6 @@ func makeLines(w, h float64, style *gogame.StrokeStyle) gogame.Surface {
 	return s
 }
 
-func makeCard(w, h float64, n count, f fill, c color, s shape) gogame.Surface {
-	surf := gogame.NewSurface(int(w), int(h))
-	surf.Fill(gogame.FillWhite)
-	var shapeSurf gogame.Surface
-	shapeW := w * 0.75
-	shapeH := shapeW / 2
-	switch s {
-	case oval:
-		shapeSurf = makeOval(shapeW, shapeH, c, f)
-	case dimond:
-		shapeSurf = makeDimond(shapeW, shapeH, c, f)
-	case tilde:
-		shapeSurf = makeTilde(shapeW, shapeH, c, f)
-	}
-	centerRect := geo.Rect{W: shapeW, H: shapeH}
-	centerRect.SetCenterX(w / 2)
-	centerRect.SetCenterY(h / 2)
-	switch n {
-	case one:
-		surf.Blit(shapeSurf, centerRect.X, centerRect.Y)
-	case two:
-		surf.Blit(shapeSurf, centerRect.X, centerRect.Y-shapeH*0.75)
-		surf.Blit(shapeSurf, centerRect.X, centerRect.Y+shapeH*0.75)
-	case three:
-		surf.Blit(shapeSurf, centerRect.X, centerRect.Y-shapeH*1.25)
-		surf.Blit(shapeSurf, centerRect.X, centerRect.Y)
-		surf.Blit(shapeSurf, centerRect.X, centerRect.Y+shapeH*1.25)
-	}
-	return surf
-}
-
 type count int
 
 const (
@@ -259,12 +226,38 @@ const (
 
 type card struct {
 	count count
-	shape shape
-	color color
 	fill  fill
+	color color
+	shape shape
 }
 
-func (c *card) surface(w, h int) gogame.Surface {
-	s := gogame.NewSurface(w, h)
-	return s
+func (c *card) surface(w, h float64) gogame.Surface {
+	surf := gogame.NewSurface(int(w), int(h))
+	surf.Fill(gogame.FillWhite)
+	var shapeSurf gogame.Surface
+	shapeW := w * 0.75
+	shapeH := shapeW / 2
+	switch c.shape {
+	case oval:
+		shapeSurf = makeOval(shapeW, shapeH, c.color, c.fill)
+	case dimond:
+		shapeSurf = makeDimond(shapeW, shapeH, c.color, c.fill)
+	case tilde:
+		shapeSurf = makeTilde(shapeW, shapeH, c.color, c.fill)
+	}
+	centerRect := geo.Rect{W: shapeW, H: shapeH}
+	centerRect.SetCenterX(w / 2)
+	centerRect.SetCenterY(h / 2)
+	switch c.count {
+	case one:
+		surf.Blit(shapeSurf, centerRect.X, centerRect.Y)
+	case two:
+		surf.Blit(shapeSurf, centerRect.X, centerRect.Y-shapeH*0.75)
+		surf.Blit(shapeSurf, centerRect.X, centerRect.Y+shapeH*0.75)
+	case three:
+		surf.Blit(shapeSurf, centerRect.X, centerRect.Y-shapeH*1.25)
+		surf.Blit(shapeSurf, centerRect.X, centerRect.Y)
+		surf.Blit(shapeSurf, centerRect.X, centerRect.Y+shapeH*1.25)
+	}
+	return surf
 }
