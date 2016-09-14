@@ -35,10 +35,11 @@ var state = struct {
 	cardButtons   [16]geo.Rect
 	hoverIndex    int
 }{
-	gameState:  menuState,
-	cardGap:    10,
-	cardArea:   geo.Rect{X: 50, Y: 50, W: 70*4 + 10*3, H: 100*4 + 10*3}, // 10 here is cardGap
-	hoverIndex: -1,
+	gameState:     menuState,
+	cardGap:       10,
+	cardArea:      geo.Rect{X: 50, Y: 50, W: 70*4 + 10*3, H: 100*4 + 10*3}, // 10 here is cardGap
+	hoverIndex:    -1,
+	selectedCards: [3]int{-1, -1, -1},
 }
 
 func setup() {
@@ -126,7 +127,27 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 		case event.MouseButtonDown:
 			// data := evt.Data.(event.MouseData)
 		case event.MouseButtonUp:
-			// data := evt.Data.(event.MouseData)
+			data := evt.Data.(event.MouseData)
+			if data.Button == 0 && state.hoverIndex >= 0 {
+				// First removed the card from the selected list if already selected
+				removed := false
+				for i := 0; i < len(state.selectedCards); i++ {
+					if state.selectedCards[i] == state.hoverIndex {
+						state.selectedCards[i] = -1
+						removed = true
+						break
+					}
+				}
+				if !removed {
+					// If not unselecting a card then select it if there is room in the list
+					for i := 0; i < len(state.selectedCards); i++ {
+						if state.selectedCards[i] < 0 {
+							state.selectedCards[i] = state.hoverIndex
+							break
+						}
+					}
+				}
+			}
 		case event.MouseMotion:
 			data := evt.Data.(event.MouseMotionData)
 			found := false
@@ -141,6 +162,19 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 				state.hoverIndex = -1
 			}
 		}
+	}
+
+	numSelected := 0
+	for i := 0; i < len(state.selectedCards); i++ {
+		if state.selectedCards[i] >= 0 {
+			numSelected++
+		}
+	}
+
+	if numSelected == 3 {
+		// TODO: check for set
+		// Animate cards out and new cards in
+		// Increment score by 1
 	}
 
 	display := gogame.MainDisplay()
@@ -193,8 +227,17 @@ func drawHoverHighlight(display gogame.Surface, t time.Duration) {
 func drawActiveCards(display gogame.Surface, area geo.Rect) {
 	w, h := (area.W-state.cardGap*3)/4, (area.H-state.cardGap*3)/4
 	x, y := area.X, area.Y
+	selectSurf := gogame.NewSurface(int(w), int(h))
+	selectSurf.Fill(&gogame.FillStyle{Colorer: gogame.Color{A: 0.2}})
 	for i, card := range state.activeCards {
 		display.Blit(card.surface(w, h), x, y)
+		// Slightly darken the card if selected
+		for _, j := range state.selectedCards {
+			if j == i {
+				display.Blit(selectSurf, x, y)
+				break
+			}
+		}
 		x += w + state.cardGap
 		if (i+1)%4 == 0 {
 			y += h + state.cardGap
