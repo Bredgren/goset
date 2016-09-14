@@ -30,8 +30,15 @@ var state = struct {
 	playTime      time.Duration
 	activeCards   [16]card
 	selectedCards [3]int
+	cardArea      geo.Rect
+	cardGap       float64
+	cardButtons   [16]geo.Rect
+	hoverIndex    int
 }{
-	gameState: menuState,
+	gameState:  menuState,
+	cardGap:    10,
+	cardArea:   geo.Rect{X: 50, Y: 50, W: 70*4 + 10*3, H: 100*4 + 10*3}, // 10 here is cardGap
+	hoverIndex: -1,
 }
 
 func setup() {
@@ -79,8 +86,17 @@ func gotoPlayState() {
 	state.playTime = 0
 	state.gameState = playState
 	makeAndShuffleDeck()
+	w, h := (state.cardArea.W-state.cardGap*3)/4, (state.cardArea.H-state.cardGap*3)/4
+	x, y := state.cardArea.X, state.cardArea.Y
 	for i := 0; i < len(state.activeCards); i++ {
 		state.activeCards[i] = state.deck[i]
+		state.cardButtons[i] = geo.Rect{X: x, Y: y, W: w, H: h}
+		x += w + state.cardGap
+		if (i+1)%4 == 0 {
+			y += h + state.cardGap
+			x = state.cardArea.X
+		}
+
 	}
 	state.deck = state.deck[len(state.activeCards):]
 }
@@ -112,14 +128,24 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 		case event.MouseButtonUp:
 			// data := evt.Data.(event.MouseData)
 		case event.MouseMotion:
-			// data := evt.Data.(event.MouseMotionData)
+			data := evt.Data.(event.MouseMotionData)
+			found := false
+			for i, a := range state.cardButtons {
+				if a.CollidePoint(data.Pos.X, data.Pos.Y) {
+					state.hoverIndex = i
+					found = true
+					break
+				}
+			}
+			if !found {
+				state.hoverIndex = -1
+			}
 		}
 	}
 
 	display := gogame.MainDisplay()
 	display.Fill(gogame.FillBlack)
 	drawPlayTime(display)
-	cardArea := geo.Rect{X: 50, Y: 50, W: 70*4 + 10*3, H: 100*4 + 10*3}
 	if state.paused {
 		font := gogame.Font{Size: 50}
 		style := gogame.TextStyle{
@@ -128,9 +154,10 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 			Align:    gogame.TextAlignCenter,
 			Baseline: gogame.TextBaselineMiddle,
 		}
-		display.DrawText("Paused", cardArea.CenterX(), cardArea.CenterY(), &font, &style)
+		display.DrawText("Paused", state.cardArea.CenterX(), state.cardArea.CenterY(), &font, &style)
 	} else {
-		drawActiveCards(display, cardArea)
+		drawHoverHighlight(display, t)
+		drawActiveCards(display, state.cardArea)
 	}
 
 	display.Flip()
@@ -152,15 +179,26 @@ func drawPlayTime(display gogame.Surface) {
 	display.DrawText(timeString, 10, 10, &font, &style)
 }
 
+func drawHoverHighlight(display gogame.Surface, t time.Duration) {
+	if state.hoverIndex < 0 {
+		return
+	}
+	display.DrawRect(state.cardButtons[state.hoverIndex].Inflate(5, 5), &gogame.StrokeStyle{
+		Colorer: gogame.Color{R: 1.0, G: 1.0, B: 0.0, A: 0.2*math.Sin(2*t.Seconds()) + 0.8},
+		Width:   3,
+		Join:    gogame.LineJoinRound,
+	})
+}
+
 func drawActiveCards(display gogame.Surface, area geo.Rect) {
-	w, h := (area.W-10*3)/4, (area.H-10*3)/4
+	w, h := (area.W-state.cardGap*3)/4, (area.H-state.cardGap*3)/4
 	x, y := area.X, area.Y
 	for i, card := range state.activeCards {
 		display.Blit(card.surface(w, h), x, y)
-		x += w + 10
+		x += w + state.cardGap
 		if (i+1)%4 == 0 {
-			y += h + 10
-			x = 50
+			y += h + state.cardGap
+			x = area.X
 		}
 	}
 }
