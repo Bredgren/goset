@@ -10,6 +10,7 @@ import (
 	"github.com/Bredgren/gogame/composite"
 	"github.com/Bredgren/gogame/event"
 	"github.com/Bredgren/gogame/geo"
+	"github.com/Bredgren/gogame/key"
 )
 
 func main() {
@@ -24,7 +25,9 @@ func main() {
 var state = struct {
 	deck          []card
 	gameState     gameState
-	playStartTime time.Duration
+	paused        bool
+	lastTime      time.Duration
+	playTime      time.Duration
 	activeCards   [16]card
 	selectedCards [3]int
 }{
@@ -32,7 +35,7 @@ var state = struct {
 }
 
 func setup() {
-	width, height := 500, 1350
+	width, height := 500, 600
 	display := gogame.MainDisplay()
 	display.SetMode(width, height)
 	display.Fill(gogame.FillBlack)
@@ -59,18 +62,21 @@ func makeAndShuffleDeck() {
 }
 
 func mainLoop(t time.Duration) {
+	dt := t - state.lastTime
+	state.lastTime = t
+
 	switch state.gameState {
 	case menuState:
-		gotoPlayState(t)
+		gotoPlayState()
 	case playState:
-		handlePlayStateLoop(t)
+		handlePlayStateLoop(t, dt)
 	case gameOverState:
 	case leaderboardState:
 	}
 }
 
-func gotoPlayState(t time.Duration) {
-	state.playStartTime = t
+func gotoPlayState() {
+	state.playTime = 0
 	state.gameState = playState
 	makeAndShuffleDeck()
 	for i := 0; i < len(state.activeCards); i++ {
@@ -79,7 +85,11 @@ func gotoPlayState(t time.Duration) {
 	state.deck = state.deck[len(state.activeCards):]
 }
 
-func handlePlayStateLoop(t time.Duration) {
+func handlePlayStateLoop(t time.Duration, dt time.Duration) {
+	if !state.paused {
+		state.playTime += dt
+	}
+
 	for evt := event.Poll(); evt.Type != event.NoEvent; evt = event.Poll() {
 		switch evt.Type {
 		case event.Quit:
@@ -89,7 +99,14 @@ func handlePlayStateLoop(t time.Duration) {
 		case event.KeyDown:
 			// data := evt.Data.(event.KeyData)
 		case event.KeyUp:
-			// data := evt.Data.(event.KeyData)
+			data := evt.Data.(event.KeyData)
+			switch data.Key {
+			case key.P:
+				state.paused = !state.paused
+				if !state.paused {
+					state.lastTime = t
+				}
+			}
 		case event.MouseButtonDown:
 			// data := evt.Data.(event.MouseData)
 		case event.MouseButtonUp:
@@ -101,26 +118,27 @@ func handlePlayStateLoop(t time.Duration) {
 
 	display := gogame.MainDisplay()
 	display.Fill(gogame.FillBlack)
-	drawPlayTime(display, t)
-	drawActiveCards(display)
-
-	// w, h := 60.0, 100.0
-	// x, y := 10.0, 10.0
-	// for _, card := range state.deck {
-	// 	display.Blit(card.surface(w, h), x, y)
-	// 	x += w + 10
-	// 	if x+w > float64(display.Width()) {
-	// 		y += h + 10
-	// 		x = 10
-	// 	}
-	// }
+	drawPlayTime(display)
+	cardArea := geo.Rect{X: 50, Y: 50, W: 70*4 + 10*3, H: 100*4 + 10*3}
+	if state.paused {
+		font := gogame.Font{Size: 50}
+		style := gogame.TextStyle{
+			Colorer:  gogame.White,
+			Type:     gogame.Fill,
+			Align:    gogame.TextAlignCenter,
+			Baseline: gogame.TextBaselineMiddle,
+		}
+		display.DrawText("Paused", cardArea.CenterX(), cardArea.CenterY(), &font, &style)
+	} else {
+		drawActiveCards(display, cardArea)
+	}
 
 	display.Flip()
 }
 
-func drawPlayTime(display gogame.Surface, t time.Duration) {
+func drawPlayTime(display gogame.Surface) {
 	// TODO: option to hide the time
-	timeString := fmt.Sprintf("%.0f", (t - state.playStartTime).Seconds())
+	timeString := fmt.Sprintf("%.0f", state.playTime.Seconds())
 	font := gogame.Font{
 		Size:   20,
 		Family: gogame.FontFamilyMonospace,
@@ -134,9 +152,9 @@ func drawPlayTime(display gogame.Surface, t time.Duration) {
 	display.DrawText(timeString, 10, 10, &font, &style)
 }
 
-func drawActiveCards(display gogame.Surface) {
-	w, h := 70.0, 100.0
-	x, y := 50.0, 50.0
+func drawActiveCards(display gogame.Surface, area geo.Rect) {
+	w, h := (area.W-10*3)/4, (area.H-10*3)/4
+	x, y := area.X, area.Y
 	for i, card := range state.activeCards {
 		display.Blit(card.surface(w, h), x, y)
 		x += w + 10
