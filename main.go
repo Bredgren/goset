@@ -35,6 +35,7 @@ var state = struct {
 	cardAreaWidth int
 	cardGap       float64
 	numCards      int
+	score         int
 }{
 	gameState:     menuState,
 	activeCards:   make([]card, 0),
@@ -95,6 +96,7 @@ func gotoPlayState() {
 		state.activeCards = append(state.activeCards, state.deck[i])
 	}
 	state.deck = state.deck[len(state.activeCards):]
+	state.score = 0
 }
 
 func handlePlayStateLoop(t time.Duration, dt time.Duration) {
@@ -171,18 +173,23 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 		// TODO: check for set
 		// Animate cards out and new cards in
 		// Increment score by 1
+		state.score++
+		for i := 0; i < len(state.selectedCards); i++ {
+			state.selectedCards[i] = -1
+		}
 	}
 
 	display := gogame.MainDisplay()
 	display.Fill(gogame.FillBlack)
 	drawPlayTime(display)
+	drawScore(display)
 	if state.paused {
 		font := gogame.Font{Size: 50}
 		style := gogame.TextStyle{
 			Colorer:  gogame.White,
 			Type:     gogame.Fill,
 			Align:    gogame.TextAlignCenter,
-			Baseline: gogame.TextBaselineMiddle,
+			Baseline: gogame.TextBaselineHanging,
 		}
 		display.DrawText("Paused", float64(display.Width()/2), state.cardRect.Y, &font, &style)
 	} else {
@@ -215,6 +222,21 @@ func drawPlayTime(display gogame.Surface) {
 		Baseline: gogame.TextBaselineTop,
 	}
 	display.DrawText(timeString, 10, 10, &font, &style)
+}
+
+func drawScore(display gogame.Surface) {
+	scoreString := fmt.Sprintf("%d", state.score)
+	font := gogame.Font{
+		Size:   30,
+		Family: gogame.FontFamilyMonospace,
+	}
+	style := gogame.TextStyle{
+		Colorer:  gogame.White,
+		Type:     gogame.Fill,
+		Align:    gogame.TextAlignCenter,
+		Baseline: gogame.TextBaselineHanging,
+	}
+	display.DrawText(scoreString, float64(display.Width()/2), 10, &font, &style)
 }
 
 func drawHoverHighlight(display gogame.Surface, t time.Duration) {
