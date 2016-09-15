@@ -22,6 +22,10 @@ func main() {
 	}()
 }
 
+const (
+	displayW, displayH = 500, 600
+)
+
 var state = struct {
 	deck          []card
 	gameState     gameState
@@ -48,9 +52,8 @@ var state = struct {
 }
 
 func setup() {
-	width, height := 500, 600
 	display := gogame.MainDisplay()
-	display.SetMode(width, height)
+	display.SetMode(displayW, displayH)
 	display.Fill(gogame.FillBlack)
 	display.Flip()
 	rand.Seed(time.Now().UnixNano())
@@ -97,6 +100,7 @@ func gotoPlayState() {
 	}
 	state.deck = state.deck[len(state.activeCards):]
 	state.score = 0
+	state.cardRect.X = (displayW / 2) - ((float64(state.cardAreaWidth)*state.cardRect.W + float64(state.cardAreaWidth-1)*state.cardGap) / 2)
 }
 
 func handlePlayStateLoop(t time.Duration, dt time.Duration) {
