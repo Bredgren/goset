@@ -23,11 +23,15 @@ func main() {
 }
 
 const (
-	displayW, displayH = 500, 600
+	displayW, displayH = 680, 500
 )
 
 var state = struct {
-	deck          []card
+	deck struct {
+		cards []card
+		rect  geo.Rect
+		hover bool
+	}
 	gameState     gameState
 	paused        bool
 	lastTime      time.Duration
@@ -41,12 +45,19 @@ var state = struct {
 	numCards      int
 	score         int
 }{
+	deck: struct {
+		cards []card
+		rect  geo.Rect
+		hover bool
+	}{
+		rect: geo.Rect{X: 10, Y: 50, W: 70, H: 100},
+	},
 	gameState:     menuState,
 	activeCards:   make([]card, 0),
 	hoverIndex:    -1,
 	selectedCards: [3]int{-1, -1, -1},
-	cardRect:      geo.Rect{X: 50, Y: 50, W: 70, H: 100}, // Location and size of top-left card
-	cardAreaWidth: 4,
+	cardRect:      geo.Rect{X: 100, Y: 50, W: 70, H: 100}, // Location and size of top-left card
+	cardAreaWidth: 3,
 	cardGap:       10,
 	numCards:      12, // Target number of cards on table
 }
@@ -70,10 +81,10 @@ func makeAndShuffleDeck() {
 			}
 		}
 	}
-	state.deck = make([]card, len(tmpDeck))
+	state.deck.cards = make([]card, len(tmpDeck))
 	order := rand.Perm(len(tmpDeck))
 	for i, pos := range order {
-		state.deck[i] = tmpDeck[pos]
+		state.deck.cards[i] = tmpDeck[pos]
 	}
 }
 
@@ -96,11 +107,10 @@ func gotoPlayState() {
 	state.gameState = playState
 	makeAndShuffleDeck()
 	for i := 0; i < state.numCards; i++ {
-		state.activeCards = append(state.activeCards, state.deck[i])
+		state.activeCards = append(state.activeCards, state.deck.cards[i])
 	}
-	state.deck = state.deck[len(state.activeCards):]
+	state.deck.cards = state.deck.cards[len(state.activeCards):]
 	state.score = 0
-	state.cardRect.X = (displayW / 2) - ((float64(state.cardAreaWidth)*state.cardRect.W + float64(state.cardAreaWidth-1)*state.cardGap) / 2)
 }
 
 func handlePlayStateLoop(t time.Duration, dt time.Duration) {
@@ -129,22 +139,34 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 			// data := evt.Data.(event.MouseData)
 		case event.MouseButtonUp:
 			data := evt.Data.(event.MouseData)
-			if data.Button == 0 && state.hoverIndex >= 0 {
-				// First removed the card from the selected list if already selected
-				removed := false
-				for i := 0; i < len(state.selectedCards); i++ {
-					if state.selectedCards[i] == state.hoverIndex {
-						state.selectedCards[i] = -1
-						removed = true
-						break
+			if data.Button == 0 {
+				if state.deck.hover {
+					numCards := 3
+					for i := 0; i < numCards; i++ {
+						state.activeCards = append(state.activeCards, state.deck.cards[i])
+					}
+					state.deck.cards = state.deck.cards[numCards:]
+					if len(state.activeCards) >= 20 {
+						state.deck.hover = false
 					}
 				}
-				if !removed {
-					// If not unselecting a card then select it if there is room in the list
+				if state.hoverIndex >= 0 {
+					// First removed the card from the selected list if already selected
+					removed := false
 					for i := 0; i < len(state.selectedCards); i++ {
-						if state.selectedCards[i] < 0 {
-							state.selectedCards[i] = state.hoverIndex
+						if state.selectedCards[i] == state.hoverIndex {
+							state.selectedCards[i] = -1
+							removed = true
 							break
+						}
+					}
+					if !removed {
+						// If not unselecting a card then select it if there is room in the list
+						for i := 0; i < len(state.selectedCards); i++ {
+							if state.selectedCards[i] < 0 {
+								state.selectedCards[i] = state.hoverIndex
+								break
+							}
 						}
 					}
 				}
@@ -163,6 +185,7 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 			if !found {
 				state.hoverIndex = -1
 			}
+			state.deck.hover = len(state.activeCards) < 20 && state.deck.rect.CollidePoint(data.Pos.X, data.Pos.Y)
 		}
 	}
 
@@ -207,6 +230,32 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 	} else {
 		drawHoverHighlight(display, t)
 		drawActiveCards(display)
+		display.DrawRect(state.deck.rect, &gogame.FillStyle{Colorer: gogame.Color{R: 0.9, G: 0.4, B: 1.0, A: 1.0}})
+		display.DrawText(fmt.Sprintf("%d", len(state.deck.cards)), state.deck.rect.CenterX(),
+			state.deck.rect.CenterY(),
+			&gogame.Font{
+				Size:   20,
+				Family: gogame.FontFamilyMonospace,
+			}, &gogame.TextStyle{
+				Colorer:  gogame.White,
+				Align:    gogame.TextAlignCenter,
+				Baseline: gogame.TextBaselineMiddle,
+			})
+		if state.deck.hover {
+			display.DrawRect(state.deck.rect.Inflate(6, 6), &gogame.StrokeStyle{
+				Colorer: gogame.Color{R: 1.0, G: 1.0, B: 0.0, A: 0.2*math.Sin(4*t.Seconds()) + 0.8},
+				Width:   3,
+				Join:    gogame.LineJoinRound,
+			})
+			display.DrawText("+3 cards", state.deck.rect.CenterX(), state.deck.rect.Bottom()+5,
+				&gogame.Font{
+					Size: 15,
+				}, &gogame.TextStyle{
+					Colorer:  gogame.White,
+					Align:    gogame.TextAlignCenter,
+					Baseline: gogame.TextBaselineTop,
+				})
+		}
 	}
 
 	display.Flip()
@@ -215,8 +264,8 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 // i is the index in state.activeCards
 func getCardRect(i int) geo.Rect {
 	r := state.cardRect.Copy()
-	r.X += (r.W + state.cardGap) * float64(i%state.cardAreaWidth)
-	r.Y += (r.H + state.cardGap) * float64(i/4)
+	r.X += (r.W + state.cardGap) * float64(i/state.cardAreaWidth)
+	r.Y += (r.H + state.cardGap) * float64(i%state.cardAreaWidth)
 	return r
 }
 
@@ -256,7 +305,7 @@ func drawHoverHighlight(display gogame.Surface, t time.Duration) {
 		return
 	}
 	cr := getCardRect(state.hoverIndex)
-	display.DrawRect(cr.Inflate(5, 5), &gogame.StrokeStyle{
+	display.DrawRect(cr.Inflate(6, 6), &gogame.StrokeStyle{
 		Colorer: gogame.Color{R: 1.0, G: 1.0, B: 0.0, A: 0.2*math.Sin(2*t.Seconds()) + 0.8},
 		Width:   3,
 		Join:    gogame.LineJoinRound,
