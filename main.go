@@ -177,7 +177,15 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 		// TODO: check for set
 		// Animate cards out and new cards in
 		// Increment score by 1
-		state.score++
+		c1 := state.activeCards[state.selectedCards[0]]
+		c2 := state.activeCards[state.selectedCards[1]]
+		c3 := state.activeCards[state.selectedCards[2]]
+		if ((c1.count == c2.count && c1.count == c3.count) || (c1.count != c2.count && c1.count != c3.count && c2.count != c3.count)) &&
+			((c1.fill == c2.fill && c1.fill == c3.fill) || (c1.fill != c2.fill && c1.fill != c3.fill && c2.fill != c3.fill)) &&
+			((c1.color == c2.color && c1.color == c3.color) || (c1.color != c2.color && c1.color != c3.color && c2.color != c3.color)) &&
+			((c1.shape == c2.shape && c1.shape == c3.shape) || (c1.shape != c2.shape && c1.shape != c3.shape && c2.shape != c3.shape)) {
+			state.score++
+		}
 		for i := 0; i < len(state.selectedCards); i++ {
 			state.selectedCards[i] = -1
 		}
