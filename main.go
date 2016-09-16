@@ -45,6 +45,7 @@ var state = struct {
 	cardGap       float64
 	numCards      int
 	score         int
+	errors        int
 	scalingCards  map[scaleAnim]bool
 	errorCards    map[int]time.Duration
 }{
@@ -230,6 +231,7 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 				state.deck.cards = state.deck.cards[1:]
 			}
 		} else {
+			state.errors++
 			for _, i := range state.selectedCards {
 				state.errorCards[i] = t + time.Duration(50*time.Millisecond)
 			}
@@ -330,7 +332,7 @@ func drawPlayTime(display gogame.Surface) {
 }
 
 func drawScore(display gogame.Surface) {
-	scoreString := fmt.Sprintf("%d", state.score)
+	scoreString := fmt.Sprintf("%d -%d", state.score, state.errors)
 	font := gogame.Font{
 		Size:   30,
 		Family: gogame.FontFamilyMonospace,
