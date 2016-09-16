@@ -45,6 +45,7 @@ var state = struct {
 	cardGap       float64
 	numCards      int
 	score         int
+	scalingCards  map[scaleAnim]bool
 }{
 	deck: struct {
 		cards []card
@@ -61,6 +62,7 @@ var state = struct {
 	cardAreaWidth: 3,
 	cardGap:       10,
 	numCards:      12, // Target number of cards on table
+	scalingCards:  make(map[scaleAnim]bool),
 }
 
 func setup() {
@@ -209,6 +211,13 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 			((c1.color == c2.color && c1.color == c3.color) || (c1.color != c2.color && c1.color != c3.color && c2.color != c3.color)) &&
 			((c1.shape == c2.shape && c1.shape == c3.shape) || (c1.shape != c2.shape && c1.shape != c3.shape && c2.shape != c3.shape)) {
 			state.score++
+			for i := 0; i < len(state.selectedCards); i++ {
+				state.scalingCards[scaleAnim{
+					cardSurf:  state.activeCards[state.selectedCards[i]].surface(state.cardRect.W, state.cardRect.H),
+					pos:       getCardRect(state.selectedCards[i]),
+					startTime: t,
+				}] = true
+			}
 			is := []int{state.selectedCards[0], state.selectedCards[1], state.selectedCards[2]}
 			sort.Ints(is)
 			state.activeCards = append(state.activeCards[:is[2]], state.activeCards[is[2]+1:]...)
@@ -265,6 +274,19 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 					Align:    gogame.TextAlignCenter,
 					Baseline: gogame.TextBaselineTop,
 				})
+		}
+
+		for sc, ok := range state.scalingCards {
+			if !ok {
+				continue
+			}
+			surf, done := sc.surface(t)
+			r := surf.Rect()
+			r.SetCenter(sc.pos.Center())
+			display.Blit(surf, r.X, r.Y)
+			if done {
+				delete(state.scalingCards, sc)
+			}
 		}
 	}
 
@@ -527,3 +549,22 @@ const (
 	gameOverState
 	leaderboardState
 )
+
+type scaleAnim struct {
+	cardSurf  gogame.Surface
+	pos       geo.Rect
+	startTime time.Duration
+}
+
+func (a *scaleAnim) surface(t time.Duration) (s gogame.Surface, done bool) {
+	curTime := t - a.startTime
+	animTime := time.Duration(400 * time.Millisecond)
+	maxScale := 1.0 // 100% larger
+	percent := float64(curTime) / float64(animTime)
+	scale := 1.0 + (percent * maxScale)
+	scaled := a.cardSurf.Scaled(scale, scale)
+	fade := gogame.NewSurface(scaled.Width(), scaled.Height())
+	fade.Fill(&gogame.FillStyle{Colorer: gogame.Color{A: 1.0 - percent}})
+	scaled.BlitComp(fade, 0, 0, composite.DestinationIn)
+	return scaled, curTime > animTime
+}
