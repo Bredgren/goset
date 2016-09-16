@@ -33,21 +33,23 @@ var state = struct {
 		rect  geo.Rect
 		hover bool
 	}
-	gameState     gameState
-	paused        bool
-	lastTime      time.Duration
-	playTime      time.Duration
-	activeCards   []card
-	hoverIndex    int
-	selectedCards [3]int
-	cardRect      geo.Rect
-	cardAreaWidth int
-	cardGap       float64
-	numCards      int
-	score         int
-	errors        int
-	scalingCards  map[scaleAnim]bool
-	errorCards    map[int]time.Duration
+	gameState       gameState
+	paused          bool
+	lastTime        time.Duration
+	playTime        time.Duration
+	activeCards     []card
+	hoverIndex      int
+	selectedCards   [3]int
+	cardRect        geo.Rect
+	cardAreaWidth   int
+	cardGap         float64
+	numCards        int
+	score           int
+	errors          int
+	lastScoreChange time.Duration
+	lastErrorChange time.Duration
+	scalingCards    map[scaleAnim]bool
+	errorCards      map[int]time.Duration
 }{
 	deck: struct {
 		cards []card
@@ -214,6 +216,7 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 			((c1.color == c2.color && c1.color == c3.color) || (c1.color != c2.color && c1.color != c3.color && c2.color != c3.color)) &&
 			((c1.shape == c2.shape && c1.shape == c3.shape) || (c1.shape != c2.shape && c1.shape != c3.shape && c2.shape != c3.shape)) {
 			state.score++
+			state.lastScoreChange = t
 			for i := 0; i < len(state.selectedCards); i++ {
 				state.scalingCards[scaleAnim{
 					cardSurf:  state.activeCards[state.selectedCards[i]].surface(state.cardRect.W, state.cardRect.H),
@@ -232,6 +235,7 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 			}
 		} else {
 			state.errors++
+			state.lastErrorChange = t
 			for _, i := range state.selectedCards {
 				state.errorCards[i] = t + time.Duration(50*time.Millisecond)
 			}
@@ -244,7 +248,7 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 	display := gogame.MainDisplay()
 	display.Fill(gogame.FillBlack)
 	drawPlayTime(display)
-	drawScore(display)
+	drawScore(display, t)
 	if state.paused {
 		font := gogame.Font{Size: 50}
 		style := gogame.TextStyle{
@@ -331,10 +335,14 @@ func drawPlayTime(display gogame.Surface) {
 	display.DrawText(timeString, 10, 10, &font, &style)
 }
 
-func drawScore(display gogame.Surface) {
-	scoreString := fmt.Sprintf("%d -%d", state.score, state.errors)
+func drawScore(display gogame.Surface, t time.Duration) {
+	scoreString := fmt.Sprintf("%d", state.score)
+	errorString := fmt.Sprintf("-%d", state.errors)
+	baseSize := 30
+	ds := 15
+	fadeTime := time.Duration(250 * time.Millisecond)
 	font := gogame.Font{
-		Size:   30,
+		Size:   baseSize,
 		Family: gogame.FontFamilyMonospace,
 	}
 	style := gogame.TextStyle{
@@ -343,7 +351,14 @@ func drawScore(display gogame.Surface) {
 		Align:    gogame.TextAlignCenter,
 		Baseline: gogame.TextBaselineHanging,
 	}
+	font.Size = baseSize + ds - int(float64(ds)*math.Min(float64(t-state.lastScoreChange)/float64(fadeTime), 1.0))
 	display.DrawText(scoreString, float64(display.Width()/2), 10, &font, &style)
+	if state.errors > 0 {
+		baseSize = 20
+		style.Colorer = gogame.Color{R: 1.0, G: 0.9, B: 0.9, A: 1.0}
+		font.Size = baseSize + ds - int(float64(ds)*math.Min(float64(t-state.lastErrorChange)/float64(fadeTime), 1.0))
+		display.DrawText(errorString, float64(display.Width()/2)+50, 10, &font, &style)
+	}
 }
 
 func drawHoverHighlight(display gogame.Surface, t time.Duration) {
