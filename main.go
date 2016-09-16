@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"sort"
 	"time"
 
 	"github.com/Bredgren/gogame"
@@ -197,9 +198,9 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 	}
 
 	if numSelected == 3 {
-		// TODO: check for set
-		// Animate cards out and new cards in
-		// Increment score by 1
+		// TODO:
+		//   Animate cards out and new cards in
+		//   Check for end game
 		c1 := state.activeCards[state.selectedCards[0]]
 		c2 := state.activeCards[state.selectedCards[1]]
 		c3 := state.activeCards[state.selectedCards[2]]
@@ -208,6 +209,15 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 			((c1.color == c2.color && c1.color == c3.color) || (c1.color != c2.color && c1.color != c3.color && c2.color != c3.color)) &&
 			((c1.shape == c2.shape && c1.shape == c3.shape) || (c1.shape != c2.shape && c1.shape != c3.shape && c2.shape != c3.shape)) {
 			state.score++
+			is := []int{state.selectedCards[0], state.selectedCards[1], state.selectedCards[2]}
+			sort.Ints(is)
+			state.activeCards = append(state.activeCards[:is[2]], state.activeCards[is[2]+1:]...)
+			state.activeCards = append(state.activeCards[:is[1]], state.activeCards[is[1]+1:]...)
+			state.activeCards = append(state.activeCards[:is[0]], state.activeCards[is[0]+1:]...)
+			for len(state.activeCards) < 12 && len(state.deck.cards) > 0 {
+				state.activeCards = append(state.activeCards, state.deck.cards[0])
+				state.deck.cards = state.deck.cards[1:]
+			}
 		}
 		for i := 0; i < len(state.selectedCards); i++ {
 			state.selectedCards[i] = -1
