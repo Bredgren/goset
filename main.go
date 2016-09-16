@@ -137,7 +137,8 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 		case event.KeyUp:
 			data := evt.Data.(event.KeyData)
 			switch data.Key {
-			case key.P:
+			case key.P, key.Escape:
+				// TODO: add a pause button and a pause menu.
 				state.paused = !state.paused
 				if !state.paused {
 					state.lastTime = t
