@@ -46,6 +46,7 @@ var state = struct {
 	numCards      int
 	score         int
 	scalingCards  map[scaleAnim]bool
+	errorCards    map[int]time.Duration
 }{
 	deck: struct {
 		cards []card
@@ -63,6 +64,7 @@ var state = struct {
 	cardGap:       10,
 	numCards:      12, // Target number of cards on table
 	scalingCards:  make(map[scaleAnim]bool),
+	errorCards:    make(map[int]time.Duration),
 }
 
 func setup() {
@@ -227,6 +229,10 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 				state.activeCards = append(state.activeCards, state.deck.cards[0])
 				state.deck.cards = state.deck.cards[1:]
 			}
+		} else {
+			for _, i := range state.selectedCards {
+				state.errorCards[i] = t + time.Duration(50*time.Millisecond)
+			}
 		}
 		for i := 0; i < len(state.selectedCards); i++ {
 			state.selectedCards[i] = -1
@@ -249,6 +255,12 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 	} else {
 		drawHoverHighlight(display, t)
 		drawActiveCards(display)
+		for i, endTime := range state.errorCards {
+			display.DrawRect(getCardRect(i), &gogame.FillStyle{Colorer: gogame.Color{R: 1.0, A: 0.6}})
+			if t > endTime {
+				delete(state.errorCards, i)
+			}
+		}
 		display.DrawRect(state.deck.rect, &gogame.FillStyle{Colorer: gogame.Color{R: 0.9, G: 0.4, B: 1.0, A: 1.0}})
 		display.DrawText(fmt.Sprintf("%d", len(state.deck.cards)), state.deck.rect.CenterX(),
 			state.deck.rect.CenterY(),
