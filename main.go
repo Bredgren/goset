@@ -209,6 +209,7 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 		// TODO:
 		//   Animate cards out and new cards in
 		//   Check for end game
+		//   No +3 when out of cards
 		c1 := state.activeCards[state.selectedCards[0]]
 		c2 := state.activeCards[state.selectedCards[1]]
 		c3 := state.activeCards[state.selectedCards[2]]
@@ -244,6 +245,7 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 		for i := 0; i < len(state.selectedCards); i++ {
 			state.selectedCards[i] = -1
 		}
+		state.hoverIndex = -1
 	}
 
 	display := gogame.MainDisplay()
