@@ -211,15 +211,10 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 	}
 
 	if numSelected == 3 {
-		// TODO:
-		//   Check for end game
 		c1 := state.activeCards[state.selectedCards[0]]
 		c2 := state.activeCards[state.selectedCards[1]]
 		c3 := state.activeCards[state.selectedCards[2]]
-		if ((c1.count == c2.count && c1.count == c3.count) || (c1.count != c2.count && c1.count != c3.count && c2.count != c3.count)) &&
-			((c1.fill == c2.fill && c1.fill == c3.fill) || (c1.fill != c2.fill && c1.fill != c3.fill && c2.fill != c3.fill)) &&
-			((c1.color == c2.color && c1.color == c3.color) || (c1.color != c2.color && c1.color != c3.color && c2.color != c3.color)) &&
-			((c1.shape == c2.shape && c1.shape == c3.shape) || (c1.shape != c2.shape && c1.shape != c3.shape && c2.shape != c3.shape)) {
+		if isSet(c1, c2, c3) {
 			state.score++
 			state.lastScoreChange = t
 			for i := 0; i < len(state.selectedCards); i++ {
@@ -241,6 +236,11 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 				state.activeCards = append(state.activeCards, state.deck.cards[0])
 				state.cardPos = append(state.cardPos, state.deck.rect)
 				state.deck.cards = state.deck.cards[1:]
+			}
+
+			// Check for end game
+			if len(state.deck.cards) == 0 && !setOnField() {
+				gotoGameOverState()
 			}
 		} else {
 			state.errors++
@@ -336,6 +336,24 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 	}
 
 	display.Flip()
+}
+
+func gotoGameOverState() {
+	gogame.Log("game over")
+	state.gameState = gameOverState
+}
+
+func setOnField() bool {
+	for i1, c1 := range state.activeCards[:len(state.activeCards)-2] {
+		for i2, c2 := range state.activeCards[i1+1 : len(state.activeCards)-1] {
+			for _, c3 := range state.activeCards[i2+1 : len(state.activeCards)] {
+				if isSet(c1, c2, c3) {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // i is the index in state.activeCards
@@ -595,6 +613,13 @@ func (c *card) surface(w, h float64) gogame.Surface {
 		surf.Blit(shapeSurf, centerRect.X, centerRect.Y+shapeH*1.25)
 	}
 	return surf
+}
+
+func isSet(c1, c2, c3 card) bool {
+	return ((c1.count == c2.count && c1.count == c3.count) || (c1.count != c2.count && c1.count != c3.count && c2.count != c3.count)) &&
+		((c1.fill == c2.fill && c1.fill == c3.fill) || (c1.fill != c2.fill && c1.fill != c3.fill && c2.fill != c3.fill)) &&
+		((c1.color == c2.color && c1.color == c3.color) || (c1.color != c2.color && c1.color != c3.color && c2.color != c3.color)) &&
+		((c1.shape == c2.shape && c1.shape == c3.shape) || (c1.shape != c2.shape && c1.shape != c3.shape && c2.shape != c3.shape))
 }
 
 type gameState int
