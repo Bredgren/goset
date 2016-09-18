@@ -38,6 +38,7 @@ var state = struct {
 	lastTime        time.Duration
 	playTime        time.Duration
 	activeCards     []card
+	cardPos         []geo.Rect
 	hoverIndex      int
 	selectedCards   [3]int
 	cardRect        geo.Rect
@@ -116,6 +117,7 @@ func gotoPlayState() {
 	makeAndShuffleDeck()
 	for i := 0; i < state.numCards; i++ {
 		state.activeCards = append(state.activeCards, state.deck.cards[i])
+		state.cardPos = append(state.cardPos, state.deck.rect)
 	}
 	state.deck.cards = state.deck.cards[len(state.activeCards):]
 	state.score = 0
@@ -153,6 +155,7 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 					numCards := 3
 					for i := 0; i < numCards; i++ {
 						state.activeCards = append(state.activeCards, state.deck.cards[i])
+						state.cardPos = append(state.cardPos, state.deck.rect)
 					}
 					state.deck.cards = state.deck.cards[numCards:]
 					if len(state.activeCards) >= 20 {
@@ -207,7 +210,6 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 
 	if numSelected == 3 {
 		// TODO:
-		//   Animate cards out and new cards in
 		//   Check for end game
 		//   No +3 when out of cards
 		c1 := state.activeCards[state.selectedCards[0]]
@@ -231,8 +233,12 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 			state.activeCards = append(state.activeCards[:is[2]], state.activeCards[is[2]+1:]...)
 			state.activeCards = append(state.activeCards[:is[1]], state.activeCards[is[1]+1:]...)
 			state.activeCards = append(state.activeCards[:is[0]], state.activeCards[is[0]+1:]...)
+			state.cardPos = append(state.cardPos[:is[2]], state.cardPos[is[2]+1:]...)
+			state.cardPos = append(state.cardPos[:is[1]], state.cardPos[is[1]+1:]...)
+			state.cardPos = append(state.cardPos[:is[0]], state.cardPos[is[0]+1:]...)
 			for len(state.activeCards) < 12 && len(state.deck.cards) > 0 {
 				state.activeCards = append(state.activeCards, state.deck.cards[0])
+				state.cardPos = append(state.cardPos, state.deck.rect)
 				state.deck.cards = state.deck.cards[1:]
 			}
 		} else {
@@ -246,6 +252,23 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 			state.selectedCards[i] = -1
 		}
 		state.hoverIndex = -1
+	}
+
+	for i := 0; i < len(state.activeCards); i++ {
+		target := getCardRect(i)
+		current := state.cardPos[i]
+		dx := target.X - current.X
+		dy := target.Y - current.Y
+		if dx < 0.5 {
+			state.cardPos[i].X = target.X
+		} else {
+			state.cardPos[i].X += (0.1 * dx)
+		}
+		if dy < 0.5 {
+			state.cardPos[i].Y = target.Y
+		} else {
+			state.cardPos[i].Y += (0.1 * dy)
+		}
 	}
 
 	display := gogame.MainDisplay()
@@ -378,9 +401,9 @@ func drawHoverHighlight(display gogame.Surface, t time.Duration) {
 
 func drawActiveCards(display gogame.Surface) {
 	selectSurf := gogame.NewSurface(int(state.cardRect.W), int(state.cardRect.H))
-	selectSurf.Fill(&gogame.FillStyle{Colorer: gogame.Color{A: 0.2}})
+	selectSurf.Fill(&gogame.FillStyle{Colorer: gogame.Color{A: 0.3}})
 	for i, card := range state.activeCards {
-		cr := getCardRect(i)
+		cr := state.cardPos[i]
 		display.Blit(card.surface(state.cardRect.W, state.cardRect.H), cr.X, cr.Y)
 		// Slightly darken the card if selected
 		for _, j := range state.selectedCards {
