@@ -197,7 +197,9 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 			if !found {
 				state.hoverIndex = -1
 			}
-			state.deck.hover = len(state.activeCards) < 20 && state.deck.rect.CollidePoint(data.Pos.X, data.Pos.Y)
+			state.deck.hover = (len(state.activeCards) < 20 &&
+				state.deck.rect.CollidePoint(data.Pos.X, data.Pos.Y) &&
+				len(state.deck.cards) > 0)
 		}
 	}
 
@@ -211,7 +213,6 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 	if numSelected == 3 {
 		// TODO:
 		//   Check for end game
-		//   No +3 when out of cards
 		c1 := state.activeCards[state.selectedCards[0]]
 		c2 := state.activeCards[state.selectedCards[1]]
 		c3 := state.activeCards[state.selectedCards[2]]
@@ -259,15 +260,15 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 		current := state.cardPos[i]
 		dx := target.X - current.X
 		dy := target.Y - current.Y
-		if dx < 0.5 {
+		if math.Abs(dx) < 0.5 {
 			state.cardPos[i].X = target.X
 		} else {
-			state.cardPos[i].X += (0.1 * dx)
+			state.cardPos[i].X += 0.1 * dx
 		}
-		if dy < 0.5 {
+		if math.Abs(dy) < 0.5 {
 			state.cardPos[i].Y = target.Y
 		} else {
-			state.cardPos[i].Y += (0.1 * dy)
+			state.cardPos[i].Y += 0.1 * dy
 		}
 	}
 
