@@ -84,7 +84,7 @@ func makeAndShuffleDeck() {
 	for _, n := range []count{one, two, three} {
 		for _, f := range []fill{empty, solid, line} {
 			for _, c := range []color{red, green, purple} {
-				for _, s := range []shape{oval, dimond, tilde} {
+				for _, s := range []shape{oval, diamond, tilde} {
 					tmpDeck = append(tmpDeck, card{count: n, fill: f, color: c, shape: s})
 				}
 			}
@@ -465,7 +465,7 @@ func makeOval(w, h float64, c color, f fill) gogame.Surface {
 	return s
 }
 
-func makeDimond(w, h float64, c color, f fill) gogame.Surface {
+func makeDiamond(w, h float64, c color, f fill) gogame.Surface {
 	color := gogame.Color(c)
 	s := gogame.NewSurface(int(w), int(h))
 	points := [][2]float64{
@@ -557,7 +557,7 @@ type shape int
 
 const (
 	oval shape = iota
-	dimond
+	diamond
 	tilde
 )
 
@@ -593,8 +593,8 @@ func (c *card) surface(w, h float64) gogame.Surface {
 	switch c.shape {
 	case oval:
 		shapeSurf = makeOval(shapeW, shapeH, c.color, c.fill)
-	case dimond:
-		shapeSurf = makeDimond(shapeW, shapeH, c.color, c.fill)
+	case diamond:
+		shapeSurf = makeDiamond(shapeW, shapeH, c.color, c.fill)
 	case tilde:
 		shapeSurf = makeTilde(shapeW, shapeH, c.color, c.fill)
 	}
