@@ -15,12 +15,10 @@ import (
 )
 
 func main() {
-	ready := gogame.Ready()
-	go func() {
-		<-ready
+	gogame.Ready(func() {
 		setup()
 		gogame.SetMainLoop(mainLoop)
-	}()
+	})
 }
 
 const (
