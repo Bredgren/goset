@@ -12,6 +12,7 @@ import (
 	"github.com/Bredgren/gogame/event"
 	"github.com/Bredgren/gogame/geo"
 	"github.com/Bredgren/gogame/key"
+	"github.com/Bredgren/gogame/ui"
 )
 
 func main() {
@@ -69,12 +70,75 @@ var state = struct {
 	errorCards:    make(map[int]time.Duration),
 }
 
+var playPauseBtn ui.BasicButton
+
+const (
+	gameBtnStatePlay ui.ButtonState = iota
+	gameBtnStatePlayHover
+	gameBtnStatePlaySelect
+	gameBtnStatePause
+	gameBtnStatePauseHover
+	gameBtnStatePauseSelect
+)
+
 func setup() {
 	display := gogame.MainDisplay()
 	display.SetMode(displayW, displayH)
 	display.Fill(gogame.FillBlack)
 	display.Flip()
 	rand.Seed(time.Now().UnixNano())
+	makeButtons()
+}
+
+func makeButtons() {
+	display := gogame.MainDisplay()
+
+	r := geo.Rect{X: 10, Y: float64(display.Height()) - 10 - 50, W: 50, H: 50}
+
+	fill := gogame.FillStyle{
+		Colorer: gogame.Color{R: 0.5, G: 0.5, B: 0.5, A: 0.8},
+	}
+	outline := gogame.StrokeStyle{
+		Colorer: gogame.Color{R: 0.5, G: 0.5, B: 0.5, A: 0.8},
+		Width:   5,
+	}
+	playSurf := gogame.NewSurface(int(r.W), int(r.H))
+	playSurf.Fill(gogame.FillBlack)
+	playSurf.DrawLines([][2]float64{
+		{10, 10},
+		{r.W - 10, r.H / 2},
+		{10, r.H - 10},
+	}, &fill)
+	playHoverSurf := playSurf.Copy()
+	playHoverSurf.DrawRect(geo.Rect{W: r.W, H: r.H}, &outline)
+	playSelectSurf := playSurf.Copy()
+	playSelectSurf.DrawRect(geo.Rect{W: r.W, H: r.H}, &fill)
+
+	pauseSurf := gogame.NewSurface(int(r.W), int(r.H))
+	pauseSurf.Fill(gogame.FillBlack)
+	pauseSurf.DrawRect(geo.Rect{X: 10, Y: 10, W: r.W / 4, H: r.H - 20}, &fill)
+	pauseSurf.DrawRect(geo.Rect{X: r.W - 10 - r.W/4, Y: 10, W: r.W / 4, H: r.H - 20}, &fill)
+	pauseHoverSurf := pauseSurf.Copy()
+	pauseHoverSurf.DrawRect(geo.Rect{W: r.W, H: r.H}, &outline)
+	pauseSelectSurf := pauseSurf.Copy()
+	pauseSelectSurf.DrawRect(geo.Rect{W: r.W, H: r.H}, &fill)
+
+	playPauseBtn = ui.BasicButton{
+		Rect:        r,
+		DefaultSurf: pauseSurf,
+		StateSurfs: map[ui.ButtonState]gogame.Surface{
+			gameBtnStatePlay:        playSurf,
+			gameBtnStatePlayHover:   playHoverSurf,
+			gameBtnStatePlaySelect:  playSelectSurf,
+			gameBtnStatePause:       pauseSurf,
+			gameBtnStatePauseHover:  pauseHoverSurf,
+			gameBtnStatePauseSelect: pauseSelectSurf,
+		},
+		Select: func() {
+			state.paused = !state.paused
+		},
+		State: gameBtnStatePause,
+	}
 }
 
 func makeAndShuffleDeck() {
@@ -138,17 +202,25 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 			data := evt.Data.(event.KeyData)
 			switch data.Key {
 			case key.P, key.Escape:
-				// TODO: add a pause button and a pause menu.
 				state.paused = !state.paused
-				if !state.paused {
-					state.lastTime = t
+				if state.paused {
+					playPauseBtn.State = gameBtnStatePlaySelect
+				} else {
+					playPauseBtn.State = gameBtnStatePauseSelect
 				}
 			}
 		case event.MouseButtonDown:
-			// data := evt.Data.(event.MouseData)
+			data := evt.Data.(event.MouseData)
+			if playPauseBtn.Rect.CollidePoint(data.Pos.X, data.Pos.Y) {
+				if state.paused {
+					playPauseBtn.State = gameBtnStatePlaySelect
+				} else {
+					playPauseBtn.State = gameBtnStatePauseSelect
+				}
+			}
 		case event.MouseButtonUp:
 			data := evt.Data.(event.MouseData)
-			if data.Button == 0 {
+			if data.Button == 0 && !state.paused {
 				if state.deck.hover {
 					numCards := 3
 					for i := 0; i < numCards; i++ {
@@ -181,23 +253,56 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 					}
 				}
 			}
-		case event.MouseMotion:
-			data := evt.Data.(event.MouseMotionData)
-			found := false
-			for i := range state.activeCards {
-				cr := getCardRect(i)
-				if cr.CollidePoint(data.Pos.X, data.Pos.Y) {
-					state.hoverIndex = i
-					found = true
-					break
+
+			if data.Button == 0 && playPauseBtn.Rect.CollidePoint(data.Pos.X, data.Pos.Y) {
+				playPauseBtn.Select()
+				if playPauseBtn.State == gameBtnStatePauseSelect {
+					playPauseBtn.State = gameBtnStatePlayHover
+				} else if playPauseBtn.State == gameBtnStatePlaySelect {
+					playPauseBtn.State = gameBtnStatePauseHover
 				}
 			}
-			if !found {
-				state.hoverIndex = -1
+		case event.MouseMotion:
+			data := evt.Data.(event.MouseMotionData)
+			if !state.paused {
+				found := false
+				for i := range state.activeCards {
+					cr := getCardRect(i)
+					if cr.CollidePoint(data.Pos.X, data.Pos.Y) {
+						state.hoverIndex = i
+						found = true
+						break
+					}
+				}
+				if !found {
+					state.hoverIndex = -1
+				}
+				state.deck.hover = (len(state.activeCards) < 20 &&
+					state.deck.rect.CollidePoint(data.Pos.X, data.Pos.Y) &&
+					len(state.deck.cards) > 0)
 			}
-			state.deck.hover = (len(state.activeCards) < 20 &&
-				state.deck.rect.CollidePoint(data.Pos.X, data.Pos.Y) &&
-				len(state.deck.cards) > 0)
+
+			if playPauseBtn.Rect.CollidePoint(data.Pos.X, data.Pos.Y) {
+				if state.paused {
+					if data.Buttons[0] {
+						playPauseBtn.State = gameBtnStatePlaySelect
+					} else {
+						playPauseBtn.State = gameBtnStatePlayHover
+					}
+				} else {
+					if data.Buttons[0] {
+						playPauseBtn.State = gameBtnStatePauseSelect
+					} else {
+						playPauseBtn.State = gameBtnStatePauseHover
+					}
+				}
+			} else {
+				if state.paused {
+					playPauseBtn.State = gameBtnStatePlay
+				} else {
+					playPauseBtn.State = gameBtnStatePause
+				}
+			}
 		}
 	}
 
@@ -332,6 +437,8 @@ func handlePlayStateLoop(t time.Duration, dt time.Duration) {
 			}
 		}
 	}
+
+	display.Blit(playPauseBtn.Surface(), playPauseBtn.Rect.X, playPauseBtn.Rect.Y)
 
 	display.Flip()
 }
