@@ -332,21 +332,24 @@ func (s *playState) checkForSet(t time.Duration) {
 }
 
 func (s *playState) moveCards(dt time.Duration) {
-	// TODO: use dt
 	for i := 0; i < len(s.activeCards); i++ {
 		target := s.getCardRect(i)
 		current := s.cardPos[i]
 		dx := target.X - current.X
 		dy := target.Y - current.Y
-		if math.Abs(dx) < 0.5 {
-			s.cardPos[i].X = target.X
+		dist := math.Sqrt(dx*dx + dy*dy)
+		dirX := dx / dist
+		dirY := dy / dist
+		speed := math.Log(dist) * 200 * dt.Seconds()
+		moveX := dirX * speed
+		moveY := dirY * speed
+		moveDist := math.Sqrt(moveX*moveX + moveY*moveY)
+		if moveDist >= dist || dist <= 1 {
+			// About to overshoot so just stop at target
+			s.cardPos[i].X, s.cardPos[i].Y = target.X, target.Y
 		} else {
-			s.cardPos[i].X += 0.1 * dx
-		}
-		if math.Abs(dy) < 0.5 {
-			s.cardPos[i].Y = target.Y
-		} else {
-			s.cardPos[i].Y += 0.1 * dy
+			s.cardPos[i].X += moveX
+			s.cardPos[i].Y += moveY
 		}
 	}
 }
