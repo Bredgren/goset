@@ -11,13 +11,14 @@ import (
 )
 
 type mainMenuState struct {
-	leaving      bool
+	nextState    GameState
 	btnFont      *gogame.Font
 	btnTextStyle *gogame.TextStyle
 	btnPadding   float64
 	btnFill      *gogame.FillStyle
 	btnOutline   *gogame.StrokeStyle
 	buttons      []*ui.BasicButton
+	resumeBtn    *ui.BasicButton
 }
 
 const (
@@ -27,7 +28,7 @@ const (
 )
 
 func (s *mainMenuState) Enter() {
-	s.leaving = false
+	s.nextState = nil
 	s.btnFont = &gogame.Font{
 		Size: 20,
 	}
@@ -47,15 +48,29 @@ func (s *mainMenuState) Enter() {
 	if len(s.buttons) == 0 {
 		s.makeBtns()
 	}
+	// TODO: actually check for saved game
+	savedGame := true
+	ri := -1
+	for i, b := range s.buttons {
+		if b == s.resumeBtn {
+			ri = i
+			break
+		}
+	}
+	if savedGame && ri < 0 {
+		s.buttons = append(s.buttons, s.resumeBtn)
+	} else if !savedGame && ri >= 0 {
+		s.buttons = append(s.buttons[:ri], s.buttons[ri+1:]...)
+	}
 }
 
 func (s *mainMenuState) Exit() {
 }
 
 func (s *mainMenuState) Update(t, dt time.Duration) {
-	if s.leaving {
+	if s.nextState != nil {
 		// TODO: leaving animation
-		globalState.gameStateMgr.Goto(globalState.playState)
+		globalState.gameStateMgr.Goto(s.nextState)
 	}
 	s.handleEvents()
 	s.draw()
@@ -114,11 +129,19 @@ func (s *mainMenuState) makeBtns() {
 	display := gogame.MainDisplay()
 	dr := display.Rect()
 
-	b := s.makePlayBtn()
-	b.Rect.MoveIP(dr.CenterX(), dr.CenterY())
+	s.resumeBtn = s.makeBtn("Resume", func() {
+		gogame.Log("TODO: handle resume button")
+	})
+
+	b := s.makeBtn("Play", func() {
+		s.nextState = globalState.playState
+	})
+	b.Rect.SetCenter(dr.Center())
 	s.buttons = append(s.buttons, b)
 
-	// s.makeResumeBtn()
+	s.resumeBtn.Rect.SetCenterX(b.Rect.CenterX())
+	s.resumeBtn.Rect.SetBottom(b.Rect.Top() - s.btnPadding)
+
 	// s.makeHelpBtn()
 	// s.makeLeaderboardBtn()
 }
@@ -130,11 +153,11 @@ func (s *mainMenuState) btnRect(text string) geo.Rect {
 	}
 }
 
-func (s *mainMenuState) makePlayBtn() *ui.BasicButton {
-	r := s.btnRect("Play")
+func (s *mainMenuState) makeBtn(text string, callback func()) *ui.BasicButton {
+	r := s.btnRect(text)
 	idle := gogame.NewSurface(int(r.W), int(r.H))
 	idle.Fill(s.btnFill)
-	idle.DrawText("Play", r.W/2, r.H/2, s.btnFont, s.btnTextStyle)
+	idle.DrawText(text, r.W/2, r.H/2, s.btnFont, s.btnTextStyle)
 
 	hover := idle.Copy()
 	hover.DrawRect(r, s.btnOutline)
@@ -152,9 +175,7 @@ func (s *mainMenuState) makePlayBtn() *ui.BasicButton {
 			btnHover:  hover,
 			btnSelect: sel,
 		},
-		Select: func() {
-			s.leaving = true
-		},
-		State: btnIdle,
+		Select: callback,
+		State:  btnIdle,
 	}
 }
