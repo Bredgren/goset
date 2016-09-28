@@ -144,7 +144,7 @@ func (s *playState) Enter() {
 func (s *playState) Exit() {
 }
 
-func (s *playState) Update(t time.Duration, dt time.Duration) {
+func (s *playState) Update(t, dt time.Duration) {
 	if !s.paused {
 		s.playTime += dt
 	}
@@ -162,11 +162,8 @@ func (s *playState) Update(t time.Duration, dt time.Duration) {
 
 func (s *playState) handleEvents() {
 	for evt := event.Poll(); evt.Type != event.NoEvent; evt = event.Poll() {
+		handleCommonEvents(evt)
 		switch evt.Type {
-		case event.Quit:
-			gogame.UnsetMainLoop()
-		case event.VideoResize:
-			// data := evt.Data.(event.ResizeData)
 		case event.KeyDown:
 			// data := evt.Data.(event.KeyData)
 		case event.KeyUp:

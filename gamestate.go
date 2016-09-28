@@ -32,6 +32,6 @@ func (s *StateMgr) Previous() GameState {
 // GameState reperents an arbitrary state used in a game.
 type GameState interface {
 	Enter()
-	Update(t time.Duration, dt time.Duration)
+	Update(t, dt time.Duration)
 	Exit()
 }
