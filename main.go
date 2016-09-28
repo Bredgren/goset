@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/Bredgren/gogame"
-	"github.com/Bredgren/gogame/event"
 )
 
 func main() {
@@ -25,13 +24,15 @@ const (
 )
 
 var globalState = struct {
-	lastTime      time.Duration
-	gameStateMgr  StateMgr
-	mainMenuState *mainMenuState
-	playState     *playState
+	lastTime         time.Duration
+	gameStateMgr     StateMgr
+	mainMenuState    *mainMenuState
+	playState        *playState
+	leaderboardState *leaderboardState
 }{
-	mainMenuState: &mainMenuState{},
-	playState:     &playState{},
+	mainMenuState:    &mainMenuState{},
+	playState:        &playState{},
+	leaderboardState: &leaderboardState{},
 }
 
 func setup() {
@@ -48,13 +49,4 @@ func mainLoop(t time.Duration) {
 	dt := t - globalState.lastTime
 	globalState.lastTime = t
 	globalState.gameStateMgr.Current().Update(t, dt)
-}
-
-func handleCommonEvents(evt event.Event) {
-	switch evt.Type {
-	case event.Quit:
-		gogame.UnsetMainLoop()
-	case event.VideoResize:
-		// data := evt.Data.(event.ResizeData)
-	}
 }
