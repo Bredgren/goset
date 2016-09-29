@@ -57,6 +57,18 @@ func (s *mainMenuState) handleEvents() {
 func (s *mainMenuState) draw() {
 	display := gogame.MainDisplay()
 	display.Fill(gogame.FillBlack)
+
+	// Draw tItle
+	titleFont := gogame.Font{
+		Size: 50,
+	}
+	titleStyle := gogame.TextStyle{
+		Colorer:  gogame.White,
+		Align:    gogame.TextAlignCenter,
+		Baseline: gogame.TextBaselineMiddle,
+	}
+	display.DrawText("SET", display.Rect().CenterX(), 10+float64(titleFont.Size), &titleFont, &titleStyle)
+
 	for _, btn := range s.buttons {
 		btn.DrawTo(display)
 	}
@@ -80,18 +92,18 @@ func (s *mainMenuState) makeBtns() {
 	s.resumeBtn.Rect.SetCenterX(playBtn.Rect.CenterX())
 	s.resumeBtn.Rect.SetBottom(playBtn.Rect.Top() - btnSpacing)
 
+	leaderBtn := makeBtn("Leaderboard", func() {
+		s.nextState = globalState.leaderboardState
+	})
+	leaderBtn.Rect.SetCenterX(playBtn.Rect.CenterX())
+	leaderBtn.Rect.SetTop(playBtn.Rect.Bottom() + btnSpacing)
+	s.buttons = append(s.buttons, leaderBtn)
+
 	helpBtn := makeBtn("Help", func() {
 		gogame.Log("TODO: handle help button")
 		// s.nextState = globalState.helpState
 	})
 	helpBtn.Rect.SetCenterX(playBtn.Rect.CenterX())
-	helpBtn.Rect.SetTop(playBtn.Rect.Bottom() + btnSpacing)
+	helpBtn.Rect.SetTop(leaderBtn.Rect.Bottom() + btnSpacing)
 	s.buttons = append(s.buttons, helpBtn)
-
-	leaderBtn := makeBtn("Leaderboard", func() {
-		s.nextState = globalState.leaderboardState
-	})
-	leaderBtn.Rect.SetCenterX(playBtn.Rect.CenterX())
-	leaderBtn.Rect.SetTop(helpBtn.Rect.Bottom() + btnSpacing)
-	s.buttons = append(s.buttons, leaderBtn)
 }
