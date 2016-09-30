@@ -44,6 +44,7 @@ func (s *mainMenuState) Update(t, dt time.Duration) {
 		globalState.gameStateMgr.Goto(s.nextState)
 	}
 	s.handleEvents()
+	globalState.cardBg.update(t, dt)
 	s.draw()
 }
 
@@ -56,7 +57,7 @@ func (s *mainMenuState) handleEvents() {
 
 func (s *mainMenuState) draw() {
 	display := gogame.MainDisplay()
-	display.Fill(gogame.FillBlack)
+	display.Blit(globalState.cardBg.surf, 0, 0)
 
 	// Draw tItle
 	titleFont := gogame.Font{

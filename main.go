@@ -29,6 +29,7 @@ var globalState = struct {
 	mainMenuState    *mainMenuState
 	playState        *playState
 	leaderboardState *leaderboardState
+	cardBg           *flyingCardBg
 }{
 	mainMenuState:    &mainMenuState{},
 	playState:        &playState{},
@@ -41,6 +42,10 @@ func setup() {
 	display.Fill(gogame.FillBlack)
 	display.Flip()
 	rand.Seed(time.Now().UnixNano())
+
+	globalState.cardBg = &flyingCardBg{
+		surf: gogame.NewSurface(display.Width(), display.Height()),
+	}
 
 	globalState.gameStateMgr.Goto(globalState.mainMenuState)
 }
