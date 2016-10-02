@@ -18,7 +18,12 @@ func (s *mainMenuState) Enter() {
 	s.nextState = nil
 	if len(s.buttons) == 0 {
 		s.makeBtns()
+	} else {
+		for _, b := range s.buttons {
+			b.State = btnIdle
+		}
 	}
+
 	// TODO: actually check for saved game
 	savedGame := true
 	ri := -1

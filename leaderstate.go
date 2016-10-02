@@ -22,6 +22,10 @@ func (s *leaderboardState) Enter() {
 
 	if len(s.buttons) == 0 {
 		s.makeBtns()
+	} else {
+		for _, b := range s.buttons {
+			b.State = btnIdle
+		}
 	}
 }
 

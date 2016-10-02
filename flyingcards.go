@@ -39,7 +39,7 @@ func (b *flyingCardBg) update(t, dt time.Duration) {
 			g = &flyingCardGroup{}
 			b.groups[i] = g
 		}
-		if !g.active {
+		if !g.active && rand.Intn(100) < 2 {
 			g.activate()
 		}
 		g.update(t, dt)
@@ -82,23 +82,21 @@ func (b *flyingCardBg) numActiveGroups() int {
 
 func (g *flyingCardGroup) activate() {
 	g.targetDist = rand.Float64()*10 + 50
-	g.k = rand.Float64()*5 + 18
-	g.dampening = rand.Float64()*0.07 + 0.8
+	g.k = rand.Float64()*5 + 15
+	g.dampening = rand.Float64()*0.07 + 0.85
 	c1, c2, c3 := randomSet()
-	cardH := rand.Float64()*15 + 90.0
-	cardW := cardH * 0.7
 	r := gogame.MainDisplay().Rect().Inflate(100, 100)
 	thickness := 75
-	x1, y1 := randomPointInRectShell(int(r.W), int(r.H), thickness)
-	x2, y2 := randomPointInRectShell(int(r.W), int(r.H), thickness)
-	x3, y3 := randomPointInRectShell(int(r.W), int(r.H), thickness)
+	x1, y1 := randomPointInRectShell(int(r.W)+200, int(r.H)+200, thickness)
+	x2, y2 := randomPointInRectShell(int(r.W)+200, int(r.H)+200, thickness)
+	x3, y3 := randomPointInRectShell(int(r.W)+200, int(r.H)+200, thickness)
 	g.cards = [3]*flyingCard{
-		{surf: c1.surface(cardW, cardH), posX: float64(x1), posY: float64(y1), mass: rand.Float64()*50 + 75},
-		{surf: c2.surface(cardW, cardH), posX: float64(x2), posY: float64(y2), mass: rand.Float64()*50 + 75},
-		{surf: c3.surface(cardW, cardH), posX: float64(x3), posY: float64(y3), mass: rand.Float64()*50 + 75},
+		{surf: c1.surface(70, 100).Scaled(0.5, 0.5), posX: float64(x1 - 100), posY: float64(y1 - 100), mass: rand.Float64()*50 + 75},
+		{surf: c2.surface(70, 100).Scaled(0.5, 0.5), posX: float64(x2 - 100), posY: float64(y2 - 100), mass: rand.Float64()*50 + 75},
+		{surf: c3.surface(70, 100).Scaled(0.5, 0.5), posX: float64(x3 - 100), posY: float64(y3 - 100), mass: rand.Float64()*50 + 75},
 	}
 	g.fading = false
-	g.fadeTime = time.Duration(2 * time.Second)
+	g.fadeTime = time.Duration(2500 * time.Millisecond)
 	g.active = true
 }
 
@@ -156,6 +154,9 @@ func (g *flyingCardGroup) update(t, dt time.Duration) {
 func randomSet() (c1, c2, c3 card) {
 	c1 = randomCard()
 	c2 = randomCard()
+	for c1 == c2 {
+		c2 = randomCard()
+	}
 	c3 = missingCard(c1, c2)
 	return
 }
