@@ -337,7 +337,7 @@ func (s *playState) moveCards(dt time.Duration) {
 		dist := math.Sqrt(dx*dx + dy*dy)
 		dirX := dx / dist
 		dirY := dy / dist
-		speed := math.Log(dist) * 200 * dt.Seconds()
+		speed := math.Log(dist) * 250 * dt.Seconds()
 		moveX := dirX * speed
 		moveY := dirY * speed
 		moveDist := math.Sqrt(moveX*moveX + moveY*moveY)
