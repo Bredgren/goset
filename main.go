@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Bredgren/gogame"
+	"github.com/Bredgren/gogame/sound"
 )
 
 func main() {
@@ -30,6 +31,7 @@ var globalState = struct {
 	playState        *playState
 	leaderboardState *leaderboardState
 	cardBg           *flyingCardBg
+	sound            map[string]sound.Interface
 }{
 	mainMenuState:    &mainMenuState{},
 	playState:        &playState{},
@@ -46,6 +48,10 @@ func setup() {
 	globalState.cardBg = &flyingCardBg{
 		surf: gogame.NewSurface(display.Width(), display.Height()),
 	}
+
+	globalState.sound = make(map[string]sound.Interface)
+	globalState.sound["btnHover"] = sound.New("hover.wav")
+	globalState.sound["btnHover"].SetVolume(0.8)
 
 	globalState.gameStateMgr.Goto(globalState.mainMenuState)
 }

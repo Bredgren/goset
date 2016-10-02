@@ -12,6 +12,7 @@ import (
 	"github.com/Bredgren/gogame/event"
 	"github.com/Bredgren/gogame/geo"
 	"github.com/Bredgren/gogame/key"
+	"github.com/Bredgren/gogame/ui"
 )
 
 type playState struct {
@@ -38,6 +39,8 @@ type playState struct {
 	lastErrorChange time.Duration
 	scalingCards    map[scaleAnim]bool
 	errorCards      map[int]time.Duration
+	playBtns        []*ui.BasicButton
+	pauseBtns       []*ui.BasicButton
 }
 
 // var playPauseBtn ui.BasicButton

@@ -48,10 +48,14 @@ func updateButtons(evt event.Event, buttons []*ui.BasicButton) {
 		data := evt.Data.(event.MouseMotionData)
 		for _, btn := range buttons {
 			if btn.Rect.CollidePoint(data.Pos.X, data.Pos.Y) {
+				prev := btn.State
 				if data.Buttons[0] {
 					btn.State = btnSelect
 				} else {
 					btn.State = btnHover
+				}
+				if prev != btn.State {
+					globalState.sound["btnHover"].PlayFromStart()
 				}
 			} else {
 				btn.State = btnIdle

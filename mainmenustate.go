@@ -66,7 +66,7 @@ func (s *mainMenuState) draw() {
 
 	// Draw tItle
 	titleFont := gogame.Font{
-		Size: 50,
+		Size: 75,
 	}
 	titleStyle := gogame.TextStyle{
 		Colorer:  gogame.White,
