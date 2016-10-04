@@ -41,6 +41,7 @@ func (s *mainMenuState) Enter() {
 }
 
 func (s *mainMenuState) Exit() {
+	gogame.MainDisplay().SetCursor(gogame.CursorDefault)
 }
 
 func (s *mainMenuState) Update(t, dt time.Duration) {
@@ -92,18 +93,15 @@ func (s *mainMenuState) makeBtns() {
 	playBtn := makeBtn("Play", func() {
 		s.nextState = globalState.playState
 	})
-	// playBtn.Rect.SetCenter(gogame.MainDisplay().Rect().Center())
 	playBtn.Rect.SetMidLeft(40, gogame.MainDisplay().Rect().CenterY())
 	s.buttons = append(s.buttons, playBtn)
 
-	// s.resumeBtn.Rect.SetCenterX(playBtn.Rect.CenterX())
 	s.resumeBtn.Rect.SetLeft(playBtn.Rect.Left())
 	s.resumeBtn.Rect.SetBottom(playBtn.Rect.Top() - btnSpacing)
 
 	leaderBtn := makeBtn("Leaderboard", func() {
 		s.nextState = globalState.leaderboardState
 	})
-	// leaderBtn.Rect.SetCenterX(playBtn.Rect.CenterX())
 	leaderBtn.Rect.SetLeft(playBtn.Rect.Left())
 	leaderBtn.Rect.SetTop(playBtn.Rect.Bottom() + btnSpacing)
 	s.buttons = append(s.buttons, leaderBtn)
@@ -112,7 +110,6 @@ func (s *mainMenuState) makeBtns() {
 		gogame.Log("TODO: handle help button")
 		// s.nextState = globalState.helpState
 	})
-	// helpBtn.Rect.SetCenterX(playBtn.Rect.CenterX())
 	helpBtn.Rect.SetLeft(playBtn.Rect.Left())
 	helpBtn.Rect.SetTop(leaderBtn.Rect.Bottom() + btnSpacing)
 	s.buttons = append(s.buttons, helpBtn)

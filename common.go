@@ -24,6 +24,7 @@ const (
 )
 
 func updateButtons(evt event.Event, buttons []*ui.BasicButton) {
+	hovering := false
 	switch evt.Type {
 	case event.MouseButtonDown:
 		data := evt.Data.(event.MouseData)
@@ -53,14 +54,20 @@ func updateButtons(evt event.Event, buttons []*ui.BasicButton) {
 					btn.State = btnSelect
 				} else {
 					btn.State = btnHover
+					hovering = true
 				}
 				if prev != btn.State {
-					globalState.sound["btnHover"].PlayFromStart()
+					// globalState.sound["btnHover"].PlayFromStart()
 				}
 			} else {
 				btn.State = btnIdle
 			}
 		}
+	}
+	if hovering {
+		gogame.MainDisplay().SetCursor(gogame.CursorPointer)
+	} else {
+		gogame.MainDisplay().SetCursor(gogame.CursorDefault)
 	}
 }
 

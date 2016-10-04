@@ -30,6 +30,7 @@ func (s *leaderboardState) Enter() {
 }
 
 func (s *leaderboardState) Exit() {
+	gogame.MainDisplay().SetCursor(gogame.CursorDefault)
 }
 
 func (s *leaderboardState) Update(t, dt time.Duration) {

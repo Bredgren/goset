@@ -145,6 +145,7 @@ func (s *playState) Enter() {
 }
 
 func (s *playState) Exit() {
+	gogame.MainDisplay().SetCursor(gogame.CursorDefault)
 }
 
 func (s *playState) Update(t, dt time.Duration) {
