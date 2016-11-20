@@ -6,17 +6,20 @@
 package main
 
 import (
+	"image/color"
 	"math/rand"
 	"time"
 
-	"github.com/Bredgren/gogame"
-	"github.com/Bredgren/gogame/sound"
+	"github.com/Bredgren/gogame/fsm"
+	"github.com/Bredgren/gogame/ggweb"
 )
 
 func main() {
-	gogame.Ready(func() {
-		setup()
-		gogame.SetMainLoop(mainLoop)
+	rand.Seed(time.Now().UnixNano())
+
+	ggweb.Init(func() {
+		g := newGame()
+		ggweb.SetMainLoop(g.mainLoop)
 	})
 }
 
@@ -24,40 +27,70 @@ const (
 	displayW, displayH = 680, 500
 )
 
-var globalState = struct {
-	lastTime         time.Duration
-	gameStateMgr     StateMgr
-	mainMenuState    *mainMenuState
-	playState        *playState
-	leaderboardState *leaderboardState
-	cardBg           *flyingCardBg
-	sound            map[string]sound.Interface
-}{
-	mainMenuState:    &mainMenuState{},
-	playState:        &playState{},
-	leaderboardState: &leaderboardState{},
+const (
+	mainMenuState    fsm.State = "mainmenu"
+	playState        fsm.State = "play"
+	leaderboardState fsm.State = "leaderboard"
+)
+
+type gameState interface {
+	Update(g *game, t, dt time.Duration) fsm.State
 }
 
-func setup() {
-	display := gogame.MainDisplay()
-	display.SetMode(displayW, displayH)
-	display.Fill(gogame.FillBlack)
-	display.Flip()
-	rand.Seed(time.Now().UnixNano())
+type game struct {
+	*fsm.FSM
+	lastTime time.Duration
+	display  *ggweb.Surface
+	state    gameState
+	// sound     map[string]sound.Interface
+	// cardBg   *flyingCardBg
+}
 
-	globalState.cardBg = &flyingCardBg{
-		surf: gogame.NewSurface(display.Width(), display.Height()),
+func newGame() *game {
+	var g game
+	g = game{
+		display: ggweb.NewSurfaceFromID("main"),
+		FSM: &fsm.FSM{
+			Transitions: []*fsm.Transition{
+				{fsm.InitialState, mainMenuState, func() {
+					g.state = newMainMenuState()
+				}},
+
+				{mainMenuState, playState, func() {}},
+				{mainMenuState, leaderboardState, func() {}},
+
+				{playState, mainMenuState, func() {}},
+
+				{leaderboardState, mainMenuState, func() {}},
+			},
+		},
+	}
+	g.display.SetSize(displayW, displayH)
+	g.display.StyleColor(ggweb.Fill, color.Black)
+	g.display.DrawRect(ggweb.Fill, g.display.Rect())
+	ggweb.RegisterEvents(g.display)
+	ggweb.DisableContextMenu = true
+
+	e := g.Goto(mainMenuState)
+	if e != nil {
+		panic(e)
 	}
 
-	globalState.sound = make(map[string]sound.Interface)
-	globalState.sound["btnHover"] = sound.New("hover.wav")
-	globalState.sound["btnHover"].SetVolume(0.8)
+	// globalState.cardBg = &flyingCardBg{
+	// 	surf: ggweb.NewSurface(display.Width(), display.Height()),
+	// }
 
-	globalState.gameStateMgr.Goto(globalState.mainMenuState)
+	// globalState.sound = make(map[string]sound.Interface)
+	// globalState.sound["btnHover"] = sound.New("hover.wav")
+	// globalState.sound["btnHover"].SetVolume(0.8)
+
+	return &g
 }
 
-func mainLoop(t time.Duration) {
-	dt := t - globalState.lastTime
-	globalState.lastTime = t
-	globalState.gameStateMgr.Current().Update(t, dt)
+func (g *game) mainLoop(t time.Duration) {
+	dt := t - g.lastTime
+	g.lastTime = t
+	if e := g.Goto(g.state.Update(g, t, dt)); e != nil {
+		ggweb.Error(e.Error())
+	}
 }
