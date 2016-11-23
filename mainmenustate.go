@@ -1,9 +1,12 @@
 package main
 
 import (
+	"image/color"
 	"time"
 
+	"github.com/Bredgren/gogame/event"
 	"github.com/Bredgren/gogame/fsm"
+	"github.com/Bredgren/gogame/ggweb"
 )
 
 // import (
@@ -16,12 +19,25 @@ import (
 
 type mainMenu struct {
 	// nextState GameState
-	// buttons   []*ui.BasicButton
+	buttons []*Button
 	// resumeBtn *ui.BasicButton
 }
 
 func newMainMenuState() gameState {
-	return &mainMenu{}
+	buttons := []*Button{
+		newTextButton("Play", 10, 10, func() {
+			ggweb.Log("Play")
+		}),
+		newTextButton("Leaderboard", 10, 50, func() {
+			ggweb.Log("Leaderboard")
+		}),
+		newTextButton("Help", 10, 90, func() {
+			ggweb.Log("Help")
+		}),
+	}
+	return &mainMenu{
+		buttons: buttons,
+	}
 }
 
 // func (s *mainMenuState) Enter() {
@@ -59,39 +75,48 @@ func (s *mainMenu) Update(g *game, t, dt time.Duration) fsm.State {
 	// 		// TODO: leaving animation
 	// 		globalState.gameStateMgr.Goto(s.nextState)
 	// 	}
-	// 	s.handleEvents()
+	s.handleEvents()
 	// 	globalState.cardBg.update(t, dt)
-	// 	s.draw()
+	s.draw(g.display)
 	return mainMenuState
 }
 
-// func (s *mainMenuState) handleEvents() {
-// 	for evt := event.Poll(); evt.Type != event.NoEvent; evt = event.Poll() {
-// 		handleCommonEvents(evt)
-// 		updateButtons(evt, s.buttons)
-// 	}
-// }
+func (s *mainMenu) handleEvents() {
+	for evt := event.Poll(); evt.Type != event.NoEvent; evt = event.Poll() {
+		// handleCommonEvents(evt)
+		// updateButtons(evt, s.buttons)
+		for _, b := range s.buttons {
+			b.handleEvent(evt)
+		}
+	}
+}
 
-// func (s *mainMenuState) draw() {
-// 	display := gogame.MainDisplay()
-// 	display.Blit(globalState.cardBg.surf, 0, 0)
+func (s *mainMenu) draw(display *ggweb.Surface) {
+	// 	display := gogame.MainDisplay()
+	// 	display.Blit(globalState.cardBg.surf, 0, 0)
 
-// 	// Draw tItle
-// 	titleFont := gogame.Font{
-// 		Size: 75,
-// 	}
-// 	titleStyle := gogame.TextStyle{
-// 		Colorer:  gogame.White,
-// 		Align:    gogame.TextAlignCenter,
-// 		Baseline: gogame.TextBaselineMiddle,
-// 	}
-// 	display.DrawText("SET", display.Rect().CenterX(), 10+float64(titleFont.Size), &titleFont, &titleStyle)
+	// 	// Draw tItle
+	// 	titleFont := gogame.Font{
+	// 		Size: 75,
+	// 	}
+	// 	titleStyle := gogame.TextStyle{
+	// 		Colorer:  gogame.White,
+	// 		Align:    gogame.TextAlignCenter,
+	// 		Baseline: gogame.TextBaselineMiddle,
+	// 	}
+	// 	display.DrawText("SET", display.Rect().CenterX(), 10+float64(titleFont.Size), &titleFont, &titleStyle)
 
-// 	for _, btn := range s.buttons {
-// 		btn.DrawTo(display)
-// 	}
-// 	display.Flip()
-// }
+	display.StyleColor(ggweb.Fill, color.Black)
+	display.DrawRect(ggweb.Fill, display.Rect())
+	display.SetCursor(ggweb.CursorDefault)
+	for _, b := range s.buttons {
+		b.drawTo(display)
+		if b.State == buttonHover {
+			display.SetCursor(ggweb.CursorPointer)
+		}
+	}
+	// 	display.Flip()
+}
 
 // func (s *mainMenuState) makeBtns() {
 // 	btnSpacing := 10.0
