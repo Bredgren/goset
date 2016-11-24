@@ -1,5 +1,16 @@
 package main
 
+import (
+	"image/color"
+	"math"
+	"math/rand"
+	"time"
+
+	"github.com/Bredgren/gogame/geo"
+	"github.com/Bredgren/gogame/ggweb"
+	"github.com/Bredgren/gogame/particle"
+)
+
 // import (
 // 	"math"
 // 	"math/rand"
@@ -15,23 +26,36 @@ package main
 // 	groups [3]*flyingCardGroup
 // }
 
-// type flyingCardGroup struct {
-// 	cards      [3]*flyingCard
-// 	targetDist float64
-// 	k          float64
-// 	dampening  float64
-// 	fading     bool
-// 	fadeStart  time.Duration
-// 	fadeTime   time.Duration
-// 	active     bool
-// }
+type FlyingCard struct {
+	particle.Particle
+	Surf  *ggweb.Surface
+	Group *FlyingCardGroup
+}
 
-// type flyingCard struct {
-// 	surf       gogame.Surface
-// 	posX, posY float64
-// 	velX, velY float64
-// 	mass       float64
-// }
+func (c *FlyingCard) Draw(display *ggweb.Surface, t time.Duration) {
+	r := c.Surf.Rect()
+	r.SetCenter(c.Pos.X, c.Pos.Y)
+	if !c.Group.Fading {
+		display.Blit(c.Surf, r.X, r.Y)
+	} else {
+		display.Save()
+		a := 1 - math.Min((t-c.Group.FadeStart).Seconds()/c.Group.FadeTime.Seconds(), 1)
+		display.SetAlpha(a)
+		display.Blit(c.Surf, r.X, r.Y)
+		display.Restore()
+	}
+}
+
+type FlyingCardGroup struct {
+	Cards      [3]*FlyingCard
+	TargetDist float64
+	K          float64
+	Dampening  float64
+	Fading     bool
+	FadeStart  time.Duration
+	FadeTime   time.Duration
+	Active     bool
+}
 
 // func (b *flyingCardBg) update(t, dt time.Duration) {
 // 	for i, g := range b.groups {
@@ -80,157 +104,155 @@ package main
 // 	return i
 // }
 
-// func (g *flyingCardGroup) activate() {
-// 	g.targetDist = rand.Float64()*10 + 50
-// 	g.k = rand.Float64()*5 + 15
-// 	g.dampening = rand.Float64()*0.07 + 0.85
-// 	c1, c2, c3 := randomSet()
-// 	r := gogame.MainDisplay().Rect().Inflate(100, 100)
-// 	thickness := 75
-// 	x1, y1 := randomPointInRectShell(int(r.W)+200, int(r.H)+200, thickness)
-// 	x2, y2 := randomPointInRectShell(int(r.W)+200, int(r.H)+200, thickness)
-// 	x3, y3 := randomPointInRectShell(int(r.W)+200, int(r.H)+200, thickness)
-// 	g.cards = [3]*flyingCard{
-// 		{surf: c1.surface(70, 100).Scaled(0.5, 0.5), posX: float64(x1 - 100), posY: float64(y1 - 100), mass: rand.Float64()*50 + 75},
-// 		{surf: c2.surface(70, 100).Scaled(0.5, 0.5), posX: float64(x2 - 100), posY: float64(y2 - 100), mass: rand.Float64()*50 + 75},
-// 		{surf: c3.surface(70, 100).Scaled(0.5, 0.5), posX: float64(x3 - 100), posY: float64(y3 - 100), mass: rand.Float64()*50 + 75},
-// 	}
-// 	g.fading = false
-// 	g.fadeTime = time.Duration(2500 * time.Millisecond)
-// 	g.active = true
+func newFlyingCardGroup(startPos geo.VecGen, mass, targetDist, k, dampening geo.NumGen) *FlyingCardGroup {
+	g := FlyingCardGroup{}
+	g.TargetDist = targetDist()
+	g.K = k()
+	g.Dampening = dampening()
+	c1, c2, c3 := randomSet()
+	g.Cards = [3]*FlyingCard{
+		{Surf: c1.surface(70, 100).Scaled(0.5, 0.5), Particle: particle.Particle{Pos: startPos(), Mass: mass()}, Group: &g},
+		{Surf: c2.surface(70, 100).Scaled(0.5, 0.5), Particle: particle.Particle{Pos: startPos(), Mass: mass()}, Group: &g},
+		{Surf: c3.surface(70, 100).Scaled(0.5, 0.5), Particle: particle.Particle{Pos: startPos(), Mass: mass()}, Group: &g},
+	}
+	g.Fading = false
+	g.FadeTime = time.Duration(2500 * time.Millisecond)
+	g.Active = true
+	return &g
+}
+
+// func (g *FlyingCardGroup) Activate() {
 // }
 
-// func (g *flyingCardGroup) update(t, dt time.Duration) {
-// 	if !g.active {
-// 		return
-// 	}
+func (g *FlyingCardGroup) Update(t, dt time.Duration) {
+	if !g.Active {
+		return
+	}
 
-// 	// Returns the force that should be applied to c1 because of c2.
-// 	forceBetween := func(c1, c2 *flyingCard) (fx, fy float64) {
-// 		distX := c2.posX - c1.posX
-// 		distY := c2.posY - c1.posY
-// 		dist := math.Sqrt(distX*distX + distY*distY)
-// 		f := (dist - g.targetDist) * g.k
-// 		return f * (distX / dist), f * (distY / dist)
-// 	}
+	// Returns the force that should be applied to c1 because of c2.
+	forceBetween := func(c1, c2 *FlyingCard) (f geo.Vec) {
+		dir := c2.Pos.Minus(c1.Pos).Normalized()
+		spring := (c2.Pos.Dist(c1.Pos) - g.TargetDist) * g.K
+		v1 := c1.Vel.Dot(dir)
+		v2 := -c2.Vel.Dot(dir)
+		v := v1 + v2
+		damp := g.Dampening * v
+		return dir.Times(spring - damp)
+	}
 
-// 	forceX01, forceY01 := forceBetween(g.cards[0], g.cards[1])
-// 	forceX02, forceY02 := forceBetween(g.cards[0], g.cards[2])
-// 	forceX12, forceY12 := forceBetween(g.cards[1], g.cards[2])
+	force01 := forceBetween(g.Cards[0], g.Cards[1])
+	force02 := forceBetween(g.Cards[0], g.Cards[2])
+	force12 := forceBetween(g.Cards[1], g.Cards[2])
 
-// 	g.cards[0].velX += (forceX01 + forceX02) / g.cards[0].mass
-// 	g.cards[0].velX *= g.dampening
-// 	g.cards[0].velY += (forceY01 + forceY02) / g.cards[0].mass
-// 	g.cards[0].velY *= g.dampening
+	g.Cards[0].ApplyForce(force01)
+	g.Cards[0].ApplyForce(force02)
 
-// 	g.cards[1].velX += (-forceX01 + forceX12) / g.cards[1].mass
-// 	g.cards[1].velX *= g.dampening
-// 	g.cards[1].velY += (-forceY01 + forceY12) / g.cards[1].mass
-// 	g.cards[1].velY *= g.dampening
+	g.Cards[1].ApplyForce(force01.Times(-1))
+	g.Cards[1].ApplyForce(force12)
 
-// 	g.cards[2].velX += (-forceX12 - forceX02) / g.cards[2].mass
-// 	g.cards[2].velX *= g.dampening
-// 	g.cards[2].velY += (-forceY12 - forceY02) / g.cards[2].mass
-// 	g.cards[2].velY *= g.dampening
+	g.Cards[2].ApplyForce(force02.Times(-1))
+	g.Cards[2].ApplyForce(force12.Times(-1))
 
-// 	for _, c := range g.cards {
-// 		c.posX += c.velX * dt.Seconds()
-// 		c.posY += c.velY * dt.Seconds()
-// 	}
+	for _, c := range g.Cards {
+		c.Update(dt)
+	}
 
-// 	dx01, dy01 := (g.cards[0].posX - g.cards[1].posX), (g.cards[0].posY - g.cards[1].posY)
-// 	d01 := dx01*dx01 + dy01*dy01
-// 	dx02, dy02 := (g.cards[0].posX - g.cards[2].posX), (g.cards[0].posY - g.cards[2].posY)
-// 	d02 := dx02*dx02 + dy02*dy02
-// 	dx12, dy12 := (g.cards[1].posX - g.cards[2].posX), (g.cards[1].posY - g.cards[2].posY)
-// 	d12 := dx12*dx12 + dy12*dy12
+	if force01.Plus(force02).Plus(force12).Len() < 10 && !g.Fading {
+		g.Fading = true
+		g.FadeStart = t
+	}
 
-// 	if d01+d02+d12 < math.Pow(g.targetDist, 3) && !g.fading {
-// 		g.fading = true
-// 		g.fadeStart = t
-// 	}
-// }
+	if g.Fading && (t-g.FadeStart).Seconds()/g.FadeTime.Seconds() >= 1.0 {
+		g.Active = false
+	}
+}
 
-// func randomSet() (c1, c2, c3 card) {
-// 	c1 = randomCard()
-// 	c2 = randomCard()
-// 	for c1 == c2 {
-// 		c2 = randomCard()
-// 	}
-// 	c3 = missingCard(c1, c2)
-// 	return
-// }
+func (g *FlyingCardGroup) Draw(display *ggweb.Surface, t time.Duration) {
+	for _, c := range g.Cards {
+		c.Draw(display, t)
+	}
+}
 
-// func randomCard() card {
-// 	return card{
-// 		count: map[int]count{0: one, 1: two, 2: three}[rand.Intn(3)],
-// 		fill:  map[int]fill{0: empty, 1: solid, 2: line}[rand.Intn(3)],
-// 		color: map[int]color{0: red, 1: green, 2: purple}[rand.Intn(3)],
-// 		shape: map[int]shape{0: oval, 1: diamond, 2: tilde}[rand.Intn(3)],
-// 	}
-// }
+func randomSet() (c1, c2, c3 card) {
+	c1 = randomCard()
+	c2 = randomCard()
+	for c1 == c2 {
+		c2 = randomCard()
+	}
+	c3 = missingCard(c1, c2)
+	return
+}
 
-// func missingCard(c1, c2 card) card {
-// 	counts := map[count]bool{one: true, two: true, three: true}
-// 	fills := map[fill]bool{empty: true, solid: true, line: true}
-// 	colors := map[color]bool{red: true, green: true, purple: true}
-// 	shapes := map[shape]bool{oval: true, diamond: true, tilde: true}
+func randomCard() card {
+	return card{
+		count: map[int]count{0: one, 1: two, 2: three}[rand.Intn(3)],
+		fill:  map[int]fill{0: empty, 1: solid, 2: line}[rand.Intn(3)],
+		color: map[int]color.Color{0: red, 1: green, 2: purple}[rand.Intn(3)],
+		shape: map[int]shape{0: oval, 1: diamond, 2: tilde}[rand.Intn(3)],
+	}
+}
 
-// 	counts[c1.count] = false
-// 	counts[c2.count] = false
+func missingCard(c1, c2 card) card {
+	counts := map[count]bool{one: true, two: true, three: true}
+	fills := map[fill]bool{empty: true, solid: true, line: true}
+	colors := map[color.Color]bool{red: true, green: true, purple: true}
+	shapes := map[shape]bool{oval: true, diamond: true, tilde: true}
 
-// 	fills[c1.fill] = false
-// 	fills[c2.fill] = false
+	counts[c1.count] = false
+	counts[c2.count] = false
 
-// 	colors[c1.color] = false
-// 	colors[c2.color] = false
+	fills[c1.fill] = false
+	fills[c2.fill] = false
 
-// 	shapes[c1.shape] = false
-// 	shapes[c2.shape] = false
+	colors[c1.color] = false
+	colors[c2.color] = false
 
-// 	c := card{}
-// 	if c1.count == c2.count {
-// 		c.count = c1.count
-// 	} else {
-// 		for i, ok := range counts {
-// 			if ok {
-// 				c.count = i
-// 			}
-// 		}
-// 	}
+	shapes[c1.shape] = false
+	shapes[c2.shape] = false
 
-// 	if c1.fill == c2.fill {
-// 		c.fill = c1.fill
-// 	} else {
-// 		for i, ok := range fills {
-// 			if ok {
-// 				c.fill = i
-// 			}
-// 		}
-// 	}
+	c := card{}
+	if c1.count == c2.count {
+		c.count = c1.count
+	} else {
+		for i, ok := range counts {
+			if ok {
+				c.count = i
+			}
+		}
+	}
 
-// 	if c1.color == c2.color {
-// 		c.color = c1.color
-// 	} else {
-// 		for i, ok := range colors {
-// 			if ok {
-// 				c.color = i
-// 			}
-// 		}
-// 	}
+	if c1.fill == c2.fill {
+		c.fill = c1.fill
+	} else {
+		for i, ok := range fills {
+			if ok {
+				c.fill = i
+			}
+		}
+	}
 
-// 	if c1.shape == c2.shape {
-// 		c.shape = c1.shape
-// 	} else {
-// 		for i, ok := range shapes {
-// 			if ok {
-// 				c.shape = i
-// 			}
-// 		}
-// 	}
+	if c1.color == c2.color {
+		c.color = c1.color
+	} else {
+		for i, ok := range colors {
+			if ok {
+				c.color = i
+			}
+		}
+	}
 
-// 	return c
-// }
+	if c1.shape == c2.shape {
+		c.shape = c1.shape
+	} else {
+		for i, ok := range shapes {
+			if ok {
+				c.shape = i
+			}
+		}
+	}
+
+	return c
+}
 
 // // randomPointInRectShell returns a uniformly random point inside a rectangluar shell.
 // // w and h are the outer width and height of the rectangle, thickness is the size of the shell.

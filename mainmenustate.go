@@ -6,94 +6,77 @@ import (
 
 	"github.com/Bredgren/gogame/event"
 	"github.com/Bredgren/gogame/fsm"
+	"github.com/Bredgren/gogame/geo"
 	"github.com/Bredgren/gogame/ggweb"
 )
 
-// import (
-// 	"time"
-
-// 	"github.com/Bredgren/gogame"
-// 	"github.com/Bredgren/gogame/event"
-// 	"github.com/Bredgren/gogame/ui"
-// )
-
-type mainMenu struct {
-	// nextState GameState
-	buttons []*Button
-	// resumeBtn *ui.BasicButton
+type MainMenu struct {
+	nextState fsm.State
+	buttons   []*Button
+	cardGroup *FlyingCardGroup
 }
 
-func newMainMenuState() gameState {
-	buttons := []*Button{
+func newMainMenuState() GameState {
+	m := MainMenu{
+		nextState: mainMenuState,
+	}
+	m.buttons = []*Button{
 		newTextButton("Play", 10, 10, func() {
 			ggweb.Log("Play")
+			m.nextState = playState
 		}),
 		newTextButton("Leaderboard", 10, 50, func() {
 			ggweb.Log("Leaderboard")
+			m.nextState = leaderboardState
 		}),
 		newTextButton("Help", 10, 90, func() {
 			ggweb.Log("Help")
+			m.nextState = helpState
 		}),
 	}
-	return &mainMenu{
-		buttons: buttons,
-	}
+	// TODO: Add resume button if there is a saved game
+	return &m
 }
 
-// func (s *mainMenuState) Enter() {
-// 	s.nextState = nil
-// 	if len(s.buttons) == 0 {
-// 		s.makeBtns()
-// 	} else {
-// 		for _, b := range s.buttons {
-// 			b.State = btnIdle
-// 		}
-// 	}
-
-// 	// TODO: actually check for saved game
-// 	savedGame := true
-// 	ri := -1
-// 	for i, b := range s.buttons {
-// 		if b == s.resumeBtn {
-// 			ri = i
-// 			break
-// 		}
-// 	}
-// 	if savedGame && ri < 0 {
-// 		s.buttons = append(s.buttons, s.resumeBtn)
-// 	} else if !savedGame && ri >= 0 {
-// 		s.buttons = append(s.buttons[:ri], s.buttons[ri+1:]...)
-// 	}
-// }
-
-// func (s *mainMenuState) Exit() {
-// 	gogame.MainDisplay().SetCursor(gogame.CursorDefault)
-// }
-
-func (s *mainMenu) Update(g *game, t, dt time.Duration) fsm.State {
-	// 	if s.nextState != nil {
-	// 		// TODO: leaving animation
-	// 		globalState.gameStateMgr.Goto(s.nextState)
-	// 	}
-	s.handleEvents()
+func (m *MainMenu) Update(g *game, t, dt time.Duration) fsm.State {
+	m.handleEvents()
 	// 	globalState.cardBg.update(t, dt)
-	s.draw(g.display)
-	return mainMenuState
+	if m.cardGroup == nil || !m.cardGroup.Active {
+		r := g.display.Rect()
+		const thick = 75
+		mass := geo.RandNum(5, 15)
+		targetDist := geo.RandNum(50, 60)
+		k := geo.RandNum(35, 45)
+		damp := geo.RandNum(14, 16)
+		m.cardGroup = newFlyingCardGroup(geo.RandVecRects([]geo.Rect{
+			{X: r.Left() - thick, Y: -thick, W: r.W + thick, H: thick},
+			{X: r.Right(), Y: -thick, W: thick, H: r.H + thick},
+			{X: r.Left(), Y: r.Bottom(), W: r.W + thick, H: thick},
+			{X: r.Left() - thick, Y: r.Top(), W: thick, H: r.H + thick},
+		}), mass, targetDist, k, damp)
+	}
+
+	m.cardGroup.Update(t, dt)
+	m.draw(g.display, t, dt)
+	return m.nextState
 }
 
-func (s *mainMenu) handleEvents() {
+func (m *MainMenu) handleEvents() {
 	for evt := event.Poll(); evt.Type != event.NoEvent; evt = event.Poll() {
 		// handleCommonEvents(evt)
 		// updateButtons(evt, s.buttons)
-		for _, b := range s.buttons {
+		for _, b := range m.buttons {
 			b.handleEvent(evt)
 		}
 	}
 }
 
-func (s *mainMenu) draw(display *ggweb.Surface) {
-	// 	display := gogame.MainDisplay()
+func (m *MainMenu) draw(display *ggweb.Surface, t, dt time.Duration) {
+	display.StyleColor(ggweb.Fill, color.Black)
+	display.DrawRect(ggweb.Fill, display.Rect())
+
 	// 	display.Blit(globalState.cardBg.surf, 0, 0)
+	m.cardGroup.Draw(display, t)
 
 	// 	// Draw tItle
 	// 	titleFont := gogame.Font{
@@ -106,16 +89,13 @@ func (s *mainMenu) draw(display *ggweb.Surface) {
 	// 	}
 	// 	display.DrawText("SET", display.Rect().CenterX(), 10+float64(titleFont.Size), &titleFont, &titleStyle)
 
-	display.StyleColor(ggweb.Fill, color.Black)
-	display.DrawRect(ggweb.Fill, display.Rect())
 	display.SetCursor(ggweb.CursorDefault)
-	for _, b := range s.buttons {
+	for _, b := range m.buttons {
 		b.drawTo(display)
 		if b.State == buttonHover {
 			display.SetCursor(ggweb.CursorPointer)
 		}
 	}
-	// 	display.Flip()
 }
 
 // func (s *mainMenuState) makeBtns() {

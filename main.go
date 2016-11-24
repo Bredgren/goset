@@ -31,9 +31,10 @@ const (
 	mainMenuState    fsm.State = "mainmenu"
 	playState        fsm.State = "play"
 	leaderboardState fsm.State = "leaderboard"
+	helpState        fsm.State = "help"
 )
 
-type gameState interface {
+type GameState interface {
 	Update(g *game, t, dt time.Duration) fsm.State
 }
 
@@ -41,7 +42,7 @@ type game struct {
 	*fsm.FSM
 	lastTime time.Duration
 	display  *ggweb.Surface
-	state    gameState
+	state    GameState
 	// sound     map[string]sound.Interface
 	// cardBg   *flyingCardBg
 }
@@ -58,10 +59,13 @@ func newGame() *game {
 
 				{mainMenuState, playState, func() {}},
 				{mainMenuState, leaderboardState, func() {}},
+				{mainMenuState, helpState, func() {}},
 
 				{playState, mainMenuState, func() {}},
 
 				{leaderboardState, mainMenuState, func() {}},
+
+				{helpState, mainMenuState, func() {}},
 			},
 		},
 	}

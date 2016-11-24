@@ -8,19 +8,19 @@ import (
 	"github.com/Bredgren/gogame/ggweb"
 )
 
-type buttonState int
+type ButtonState int
 
 const (
-	buttonIdle = buttonState(iota)
+	buttonIdle = ButtonState(iota)
 	buttonHover
 	buttonSelect
 )
 
 type Button struct {
 	Rect     geo.Rect
-	Surfs    map[buttonState]*ggweb.Surface
+	Surfs    map[ButtonState]*ggweb.Surface
 	Callback func()
-	State    buttonState
+	State    ButtonState
 }
 
 func newTextButton(text string, x, y float64, callback func()) *Button {
@@ -37,7 +37,7 @@ func newTextButton(text string, x, y float64, callback func()) *Button {
 	idleSurf := ggweb.NewSurface(textWidth+padding*2, textHeight+padding*2)
 	idleSurf.SetFont(&font)
 
-	idleSurf.StyleColor(ggweb.Fill, color.Black)
+	idleSurf.StyleColor(ggweb.Fill, color.RGBA{A: 100})
 	idleSurf.DrawRect(ggweb.Fill, idleSurf.Rect())
 
 	idleSurf.StyleColor(ggweb.Stroke, color.White)
@@ -64,7 +64,7 @@ func newTextButton(text string, x, y float64, callback func()) *Button {
 	r.SetTopLeft(x, y)
 	return &Button{
 		Rect: r,
-		Surfs: map[buttonState]*ggweb.Surface{
+		Surfs: map[ButtonState]*ggweb.Surface{
 			buttonIdle:   idleSurf,
 			buttonHover:  hoverSurf,
 			buttonSelect: hoverSurf,
