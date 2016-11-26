@@ -11,9 +11,9 @@ import (
 )
 
 type MainMenu struct {
-	nextState fsm.State
-	buttons   []*Button
-	cardGroup *FlyingCardGroup
+	nextState  fsm.State
+	buttons    []*Button
+	cardGroups [4]*FlyingCardGroup
 }
 
 func newMainMenuState() GameState {
@@ -35,28 +35,32 @@ func newMainMenuState() GameState {
 		}),
 	}
 	// TODO: Add resume button if there is a saved game
+	for i := range m.cardGroups {
+		m.cardGroups[i] = &FlyingCardGroup{}
+	}
 	return &m
 }
 
 func (m *MainMenu) Update(g *game, t, dt time.Duration) fsm.State {
 	m.handleEvents()
-	// 	globalState.cardBg.update(t, dt)
-	if m.cardGroup == nil || !m.cardGroup.Active {
-		r := g.display.Rect()
-		const thick = 75
-		mass := geo.RandNum(5, 15)
-		targetDist := geo.RandNum(50, 60)
-		k := geo.RandNum(35, 45)
-		damp := geo.RandNum(14, 16)
-		m.cardGroup = newFlyingCardGroup(geo.RandVecRects([]geo.Rect{
-			{X: r.Left() - thick, Y: -thick, W: r.W + thick, H: thick},
-			{X: r.Right(), Y: -thick, W: thick, H: r.H + thick},
-			{X: r.Left(), Y: r.Bottom(), W: r.W + thick, H: thick},
-			{X: r.Left() - thick, Y: r.Top(), W: thick, H: r.H + thick},
-		}), mass, targetDist, k, damp)
+	for _, cg := range m.cardGroups {
+		if cg == nil || !cg.Active {
+			r := g.display.Rect()
+			mass := geo.RandNum(5, 15)
+			targetDist := geo.RandNum(50, 60)
+			k := geo.RandNum(35, 45)
+			damp := geo.RandNum(14, 16)
+			const thick = 75
+			cg.Activate(geo.RandVecRects([]geo.Rect{
+				{X: r.Left() - thick, Y: -thick, W: r.W + thick, H: thick},
+				{X: r.Right(), Y: -thick, W: thick, H: r.H + thick},
+				{X: r.Left(), Y: r.Bottom(), W: r.W + thick, H: thick},
+				{X: r.Left() - thick, Y: r.Top(), W: thick, H: r.H + thick},
+			}), mass, targetDist, k, damp)
+		}
+		cg.Update(t, dt)
 	}
 
-	m.cardGroup.Update(t, dt)
 	m.draw(g.display, t, dt)
 	return m.nextState
 }
@@ -75,8 +79,9 @@ func (m *MainMenu) draw(display *ggweb.Surface, t, dt time.Duration) {
 	display.StyleColor(ggweb.Fill, color.Black)
 	display.DrawRect(ggweb.Fill, display.Rect())
 
-	// 	display.Blit(globalState.cardBg.surf, 0, 0)
-	m.cardGroup.Draw(display, t)
+	for _, cg := range m.cardGroups {
+		cg.Draw(display, t)
+	}
 
 	// 	// Draw tItle
 	// 	titleFont := gogame.Font{

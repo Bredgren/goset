@@ -47,7 +47,7 @@ func (c *FlyingCard) Draw(display *ggweb.Surface, t time.Duration) {
 }
 
 type FlyingCardGroup struct {
-	Cards      [3]*FlyingCard
+	Cards      [3]FlyingCard
 	TargetDist float64
 	K          float64
 	Dampening  float64
@@ -104,25 +104,20 @@ type FlyingCardGroup struct {
 // 	return i
 // }
 
-func newFlyingCardGroup(startPos geo.VecGen, mass, targetDist, k, dampening geo.NumGen) *FlyingCardGroup {
-	g := FlyingCardGroup{}
+func (g *FlyingCardGroup) Activate(startPos geo.VecGen, mass, targetDist, k, dampening geo.NumGen) {
 	g.TargetDist = targetDist()
 	g.K = k()
 	g.Dampening = dampening()
 	c1, c2, c3 := randomSet()
-	g.Cards = [3]*FlyingCard{
-		{Surf: c1.surface(70, 100).Scaled(0.5, 0.5), Particle: particle.Particle{Pos: startPos(), Mass: mass()}, Group: &g},
-		{Surf: c2.surface(70, 100).Scaled(0.5, 0.5), Particle: particle.Particle{Pos: startPos(), Mass: mass()}, Group: &g},
-		{Surf: c3.surface(70, 100).Scaled(0.5, 0.5), Particle: particle.Particle{Pos: startPos(), Mass: mass()}, Group: &g},
+	g.Cards = [3]FlyingCard{
+		{Surf: c1.surface(70, 100).Scaled(0.5, 0.5), Particle: particle.Particle{Pos: startPos(), Mass: mass()}, Group: g},
+		{Surf: c2.surface(70, 100).Scaled(0.5, 0.5), Particle: particle.Particle{Pos: startPos(), Mass: mass()}, Group: g},
+		{Surf: c3.surface(70, 100).Scaled(0.5, 0.5), Particle: particle.Particle{Pos: startPos(), Mass: mass()}, Group: g},
 	}
 	g.Fading = false
 	g.FadeTime = time.Duration(2500 * time.Millisecond)
 	g.Active = true
-	return &g
 }
-
-// func (g *FlyingCardGroup) Activate() {
-// }
 
 func (g *FlyingCardGroup) Update(t, dt time.Duration) {
 	if !g.Active {
@@ -140,9 +135,9 @@ func (g *FlyingCardGroup) Update(t, dt time.Duration) {
 		return dir.Times(spring - damp)
 	}
 
-	force01 := forceBetween(g.Cards[0], g.Cards[1])
-	force02 := forceBetween(g.Cards[0], g.Cards[2])
-	force12 := forceBetween(g.Cards[1], g.Cards[2])
+	force01 := forceBetween(&g.Cards[0], &g.Cards[1])
+	force02 := forceBetween(&g.Cards[0], &g.Cards[2])
+	force12 := forceBetween(&g.Cards[1], &g.Cards[2])
 
 	g.Cards[0].ApplyForce(force01)
 	g.Cards[0].ApplyForce(force02)
@@ -153,8 +148,8 @@ func (g *FlyingCardGroup) Update(t, dt time.Duration) {
 	g.Cards[2].ApplyForce(force02.Times(-1))
 	g.Cards[2].ApplyForce(force12.Times(-1))
 
-	for _, c := range g.Cards {
-		c.Update(dt)
+	for i := range g.Cards {
+		g.Cards[i].Update(dt)
 	}
 
 	if force01.Plus(force02).Plus(force12).Len() < 10 && !g.Fading {
