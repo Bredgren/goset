@@ -2,6 +2,7 @@ package main
 
 import (
 	"image/color"
+	"math/rand"
 	"time"
 
 	"github.com/Bredgren/gogame/event"
@@ -16,20 +17,22 @@ type MainMenu struct {
 	cardGroups [4]*FlyingCardGroup
 }
 
-func newMainMenuState() GameState {
+func newMainMenuState(display *ggweb.Surface) GameState {
 	m := MainMenu{
 		nextState: mainMenuState,
 	}
+	btnX := 40.0
+	btnY := display.Rect().CenterY()
 	m.buttons = []*Button{
-		newTextButton("Play", 10, 10, func() {
+		newTextButton("Play", btnX, btnY, func() {
 			ggweb.Log("Play")
 			m.nextState = playState
 		}),
-		newTextButton("Leaderboard", 10, 50, func() {
+		newTextButton("Leaderboard", btnX, btnY+50, func() {
 			ggweb.Log("Leaderboard")
 			m.nextState = leaderboardState
 		}),
-		newTextButton("Help", 10, 90, func() {
+		newTextButton("Help", btnX, btnY+100, func() {
 			ggweb.Log("Help")
 			m.nextState = helpState
 		}),
@@ -44,7 +47,7 @@ func newMainMenuState() GameState {
 func (m *MainMenu) Update(g *game, t, dt time.Duration) fsm.State {
 	m.handleEvents()
 	for _, cg := range m.cardGroups {
-		if cg == nil || !cg.Active {
+		if (cg == nil || !cg.Active) && rand.Float64() < 0.01 {
 			r := g.display.Rect()
 			mass := geo.RandNum(5, 15)
 			targetDist := geo.RandNum(50, 60)
@@ -67,8 +70,6 @@ func (m *MainMenu) Update(g *game, t, dt time.Duration) fsm.State {
 
 func (m *MainMenu) handleEvents() {
 	for evt := event.Poll(); evt.Type != event.NoEvent; evt = event.Poll() {
-		// handleCommonEvents(evt)
-		// updateButtons(evt, s.buttons)
 		for _, b := range m.buttons {
 			b.handleEvent(evt)
 		}
@@ -83,16 +84,14 @@ func (m *MainMenu) draw(display *ggweb.Surface, t, dt time.Duration) {
 		cg.Draw(display, t)
 	}
 
-	// 	// Draw tItle
-	// 	titleFont := gogame.Font{
-	// 		Size: 75,
-	// 	}
-	// 	titleStyle := gogame.TextStyle{
-	// 		Colorer:  gogame.White,
-	// 		Align:    gogame.TextAlignCenter,
-	// 		Baseline: gogame.TextBaselineMiddle,
-	// 	}
-	// 	display.DrawText("SET", display.Rect().CenterX(), 10+float64(titleFont.Size), &titleFont, &titleStyle)
+	titleFont := ggweb.Font{
+		Size: 75,
+	}
+	display.SetFont(&titleFont)
+	display.StyleColor(ggweb.Fill, color.White)
+	display.SetTextAlign(ggweb.TextAlignCenter)
+	display.SetTextBaseline(ggweb.TextBaselineMiddle)
+	display.DrawText(ggweb.Fill, "SET", display.Rect().CenterX(), 10+float64(titleFont.Size))
 
 	display.SetCursor(ggweb.CursorDefault)
 	for _, b := range m.buttons {
@@ -102,36 +101,3 @@ func (m *MainMenu) draw(display *ggweb.Surface, t, dt time.Duration) {
 		}
 	}
 }
-
-// func (s *mainMenuState) makeBtns() {
-// 	btnSpacing := 10.0
-
-// 	s.resumeBtn = makeBtn("Resume", func() {
-// 		gogame.Log("TODO: handle resume button")
-// 		// s.nextState = globalState.playState
-// 	})
-
-// 	playBtn := makeBtn("Play", func() {
-// 		s.nextState = globalState.playState
-// 	})
-// 	playBtn.Rect.SetMidLeft(40, gogame.MainDisplay().Rect().CenterY())
-// 	s.buttons = append(s.buttons, playBtn)
-
-// 	s.resumeBtn.Rect.SetLeft(playBtn.Rect.Left())
-// 	s.resumeBtn.Rect.SetBottom(playBtn.Rect.Top() - btnSpacing)
-
-// 	leaderBtn := makeBtn("Leaderboard", func() {
-// 		s.nextState = globalState.leaderboardState
-// 	})
-// 	leaderBtn.Rect.SetLeft(playBtn.Rect.Left())
-// 	leaderBtn.Rect.SetTop(playBtn.Rect.Bottom() + btnSpacing)
-// 	s.buttons = append(s.buttons, leaderBtn)
-
-// 	helpBtn := makeBtn("Help", func() {
-// 		gogame.Log("TODO: handle help button")
-// 		// s.nextState = globalState.helpState
-// 	})
-// 	helpBtn.Rect.SetLeft(playBtn.Rect.Left())
-// 	helpBtn.Rect.SetTop(leaderBtn.Rect.Bottom() + btnSpacing)
-// 	s.buttons = append(s.buttons, helpBtn)
-// }

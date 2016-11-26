@@ -24,7 +24,7 @@ type Button struct {
 }
 
 func newTextButton(text string, x, y float64, callback func()) *Button {
-	const textHeight = 20
+	const textHeight = 30
 	const padding = 5
 	font := ggweb.Font{
 		Size: textHeight,

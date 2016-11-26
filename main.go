@@ -49,12 +49,13 @@ type game struct {
 
 func newGame() *game {
 	var g game
+	display := ggweb.NewSurfaceFromID("main")
 	g = game{
-		display: ggweb.NewSurfaceFromID("main"),
+		display: display,
 		FSM: &fsm.FSM{
 			Transitions: []*fsm.Transition{
 				{fsm.InitialState, mainMenuState, func() {
-					g.state = newMainMenuState()
+					g.state = newMainMenuState(display)
 				}},
 
 				{mainMenuState, playState, func() {}},
@@ -94,6 +95,9 @@ func newGame() *game {
 func (g *game) mainLoop(t time.Duration) {
 	dt := t - g.lastTime
 	g.lastTime = t
+	if t == dt {
+		return
+	}
 	if e := g.Goto(g.state.Update(g, t, dt)); e != nil {
 		ggweb.Error(e.Error())
 	}

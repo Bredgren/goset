@@ -33,6 +33,9 @@ type FlyingCard struct {
 }
 
 func (c *FlyingCard) Draw(display *ggweb.Surface, t time.Duration) {
+	if c.Group == nil || !c.Group.Active {
+		return
+	}
 	r := c.Surf.Rect()
 	r.SetCenter(c.Pos.X, c.Pos.Y)
 	if !c.Group.Fading {
