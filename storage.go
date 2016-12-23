@@ -1,5 +1,12 @@
 package main
 
+import (
+	"encoding/json"
+	"time"
+
+	"github.com/Bredgren/gogame/ggweb"
+)
+
 // import (
 // 	"encoding/json"
 // 	"time"
@@ -7,11 +14,35 @@ package main
 // 	"github.com/Bredgren/gogame"
 // )
 
-// // Local storage keys
-// const (
-// 	saveData   = "saveData"
-// 	leaderData = "leaderData"
-// )
+// Local storage keys
+const (
+	saveData   = "saveData"
+	leaderData = "leaderData"
+)
+
+type SaveData struct {
+	PlayTime    time.Duration
+	ActiveCards []card
+	Deck        []card
+	Sets        int
+	Errors      int
+}
+
+func getSaveData() (SaveData, bool) {
+	strData, ok := ggweb.LocalStorageGet(saveData)
+	if !ok {
+		return SaveData{}, false
+	}
+	data := SaveData{}
+	e := json.Unmarshal([]byte(strData), &data)
+	if e != nil {
+		// Must be saved in improper format somehow, just delete it.
+		ggweb.Log("Error reading saved game data:", e.Error())
+		ggweb.LocalStorageRemove(saveData)
+		return SaveData{}, false
+	}
+	return data, true
+}
 
 // type leaderboardEntry struct {
 // 	numSets   int

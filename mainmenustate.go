@@ -24,8 +24,8 @@ func newMainMenuState(display *ggweb.Surface) GameState {
 	btnX := 40.0
 	btnY := display.Rect().CenterY()
 	m.buttons = []*Button{
-		newTextButton("Play", btnX, btnY, func() {
-			ggweb.Log("Play")
+		newTextButton("New Game", btnX, btnY, func() {
+			ggweb.Log("New Game")
 			m.nextState = playState
 		}),
 		newTextButton("Leaderboard", btnX, btnY+50, func() {
@@ -37,7 +37,15 @@ func newMainMenuState(display *ggweb.Surface) GameState {
 			m.nextState = helpState
 		}),
 	}
-	// TODO: Add resume button if there is a saved game
+
+	if _, ok := getSaveData(); ok {
+		m.buttons = append(m.buttons,
+			newTextButton("Resume", btnX, btnY-50, func() {
+				ggweb.Log("Resume")
+				m.nextState = playState
+			}))
+	}
+
 	for i := range m.cardGroups {
 		m.cardGroups[i] = &FlyingCardGroup{}
 	}

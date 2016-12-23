@@ -1,5 +1,14 @@
 package main
 
+import (
+	"fmt"
+	"image/color"
+	"time"
+
+	"github.com/Bredgren/gogame/fsm"
+	"github.com/Bredgren/gogame/ggweb"
+)
+
 // import (
 // 	"fmt"
 // 	"math"
@@ -15,33 +24,67 @@ package main
 // 	"github.com/Bredgren/gogame/ui"
 // )
 
-// type playState struct {
-// 	deck struct {
-// 		cards []card
-// 		rect  geo.Rect
-// 		hover bool
-// 	}
-// 	gameOver        bool
-// 	paused          bool
-// 	playTime        time.Duration
-// 	activeCards     []card
-// 	cardPos         []geo.Rect
-// 	hoverIndex      int
-// 	selectedCards   [3]int
-// 	cardRect        geo.Rect // Location and size of top-left card
-// 	cardAreaWidth   int
-// 	cardGap         float64
-// 	numCards        int // Target number of cards on table
-// 	maxActiveCards  int
-// 	score           int
-// 	errors          int
-// 	lastScoreChange time.Duration
-// 	lastErrorChange time.Duration
-// 	scalingCards    map[scaleAnim]bool
-// 	errorCards      map[int]time.Duration
-// 	playBtns        []*ui.BasicButton
-// 	pauseBtns       []*ui.BasicButton
-// }
+type PlayState struct {
+	SD SaveData
+	// 	deck struct {
+	// 		cards []card
+	// 		rect  geo.Rect
+	// 		hover bool
+	// 	}
+	// 	gameOver        bool
+	// 	paused          bool
+	// 	activeCards     []card
+	// 	cardPos         []geo.Rect
+	// 	hoverIndex      int
+	// 	selectedCards   [3]int
+	// 	cardRect        geo.Rect // Location and size of top-left card
+	// 	cardAreaWidth   int
+	// 	cardGap         float64
+	// 	numCards        int // Target number of cards on table
+	// 	maxActiveCards  int
+	// 	score           int
+	// 	errors          int
+	// 	lastScoreChange time.Duration
+	// 	lastErrorChange time.Duration
+	// 	scalingCards    map[scaleAnim]bool
+	// 	errorCards      map[int]time.Duration
+	// 	playBtns        []*ui.BasicButton
+	// 	pauseBtns       []*ui.BasicButton
+}
+
+func newPlayState(sd SaveData) *PlayState {
+	return &PlayState{
+		SD: sd,
+	}
+}
+
+func (p *PlayState) Update(g *game, t, dt time.Duration) fsm.State {
+	// 	if !s.paused {
+	p.SD.PlayTime += dt
+	// 	}
+
+	// p.handleEvents()
+	p.draw(g.display, t, dt)
+	return playState
+}
+
+func (p *PlayState) draw(display *ggweb.Surface, t, dt time.Duration) {
+	display.StyleColor(ggweb.Fill, color.Black)
+	display.DrawRect(ggweb.Fill, display.Rect())
+	p.drawPlayTime(display)
+}
+
+func (p *PlayState) drawPlayTime(display *ggweb.Surface) {
+	timeString := fmt.Sprintf("%.0f", p.SD.PlayTime.Seconds())
+	display.SetFont(&ggweb.Font{
+		Size:   20,
+		Family: ggweb.FontFamilyMonospace,
+	})
+	display.StyleColor(ggweb.Fill, color.White)
+	display.SetTextAlign(ggweb.TextAlignLeft)
+	display.SetTextBaseline(ggweb.TextBaselineTop)
+	display.DrawText(ggweb.Fill, timeString, 10, 10)
+}
 
 // // var playPauseBtn ui.BasicButton
 // // var saveQuitBtn ui.BasicButton

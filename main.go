@@ -58,7 +58,10 @@ func newGame() *game {
 					g.state = newMainMenuState(display)
 				}},
 
-				{mainMenuState, playState, func() {}},
+				{mainMenuState, playState, func() {
+					data, _ := getSaveData()
+					g.state = newPlayState(data)
+				}},
 				{mainMenuState, leaderboardState, func() {}},
 				{mainMenuState, helpState, func() {}},
 
