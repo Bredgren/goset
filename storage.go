@@ -21,11 +21,11 @@ const (
 )
 
 type SaveData struct {
-	PlayTime    time.Duration
-	ActiveCards []card
-	Deck        []card
-	Sets        int
-	Errors      int
+	PlayTime    time.Duration `json:"play_time"`
+	ActiveCards []card        `json:"active_cards"`
+	Deck        []card        `json:"deck"`
+	Sets        int           `json:"sets"`
+	Errors      int           `json:"errors"`
 }
 
 func getSaveData() (SaveData, bool) {
@@ -42,6 +42,19 @@ func getSaveData() (SaveData, bool) {
 		return SaveData{}, false
 	}
 	return data, true
+}
+
+func setSaveData(d *SaveData) error {
+	strData, e := json.Marshal(d)
+	if e != nil {
+		return e
+	}
+	ggweb.LocalStorageSet(saveData, string(strData))
+	return nil
+}
+
+func clearSaveData() {
+	ggweb.LocalStorageRemove(saveData)
 }
 
 // type leaderboardEntry struct {

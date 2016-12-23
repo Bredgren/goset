@@ -25,14 +25,14 @@ import (
 // )
 
 type PlayState struct {
-	SD SaveData
+	SD     SaveData
+	Paused bool
 	// 	deck struct {
 	// 		cards []card
 	// 		rect  geo.Rect
 	// 		hover bool
 	// 	}
 	// 	gameOver        bool
-	// 	paused          bool
 	// 	activeCards     []card
 	// 	cardPos         []geo.Rect
 	// 	hoverIndex      int
@@ -59,12 +59,15 @@ func newPlayState(sd SaveData) *PlayState {
 }
 
 func (p *PlayState) Update(g *game, t, dt time.Duration) fsm.State {
-	// 	if !s.paused {
-	p.SD.PlayTime += dt
-	// 	}
+	if !p.Paused {
+		p.SD.PlayTime += dt
+	}
 
 	// p.handleEvents()
 	p.draw(g.display, t, dt)
+
+	p.saveState()
+
 	return playState
 }
 
@@ -84,6 +87,12 @@ func (p *PlayState) drawPlayTime(display *ggweb.Surface) {
 	display.SetTextAlign(ggweb.TextAlignLeft)
 	display.SetTextBaseline(ggweb.TextBaselineTop)
 	display.DrawText(ggweb.Fill, timeString, 10, 10)
+}
+
+func (p *PlayState) saveState() {
+	if e := setSaveData(&p.SD); e != nil {
+		ggweb.Log("Unable to save progress:", e.Error())
+	}
 }
 
 // // var playPauseBtn ui.BasicButton

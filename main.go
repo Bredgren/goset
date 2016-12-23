@@ -30,6 +30,8 @@ const (
 const (
 	mainMenuState    fsm.State = "mainmenu"
 	playState        fsm.State = "play"
+	resumeState      fsm.State = "resume"
+	endGameState     fsm.State = "endgame"
 	leaderboardState fsm.State = "leaderboard"
 	helpState        fsm.State = "help"
 )
@@ -59,6 +61,9 @@ func newGame() *game {
 				}},
 
 				{mainMenuState, playState, func() {
+					g.state = newPlayState(SaveData{})
+				}},
+				{mainMenuState, resumeState, func() {
 					data, _ := getSaveData()
 					g.state = newPlayState(data)
 				}},
@@ -66,6 +71,13 @@ func newGame() *game {
 				{mainMenuState, helpState, func() {}},
 
 				{playState, mainMenuState, func() {}},
+				{playState, endGameState, func() {
+					clearSaveData()
+				}},
+
+				{resumeState, playState, func() {}},
+
+				{endGameState, mainMenuState, func() {}},
 
 				{leaderboardState, mainMenuState, func() {}},
 
