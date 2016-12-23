@@ -1,7 +1,6 @@
 // TODO:
-//   - saving/restoring game
-//   - main menu
-//   - "tutorial"
+//   - play
+//   - help
 //   - leaderboard
 package main
 
@@ -61,16 +60,18 @@ func newGame() *game {
 				}},
 
 				{mainMenuState, playState, func() {
-					g.state = newPlayState(SaveData{})
+					g.state = newPlayState(display, SaveData{})
 				}},
 				{mainMenuState, resumeState, func() {
 					data, _ := getSaveData()
-					g.state = newPlayState(data)
+					g.state = newPlayState(display, data)
 				}},
 				{mainMenuState, leaderboardState, func() {}},
 				{mainMenuState, helpState, func() {}},
 
-				{playState, mainMenuState, func() {}},
+				{playState, mainMenuState, func() {
+					g.state = newMainMenuState(display)
+				}},
 				{playState, endGameState, func() {
 					clearSaveData()
 				}},

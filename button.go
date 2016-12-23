@@ -23,11 +23,11 @@ type Button struct {
 	State    ButtonState
 }
 
-func newTextButton(text string, x, y float64, callback func()) *Button {
-	const textHeight = 30
+func newTextButton(text string, size, x, y float64, callback func()) *Button {
+	textHeight := int(size)
 	const padding = 5
 	font := ggweb.Font{
-		Size: textHeight,
+		Size: size,
 	}
 
 	s := ggweb.NewSurface(0, 0)
@@ -41,7 +41,7 @@ func newTextButton(text string, x, y float64, callback func()) *Button {
 	idleSurf.DrawRect(ggweb.Fill, idleSurf.Rect())
 
 	idleSurf.StyleColor(ggweb.Stroke, color.White)
-	idleSurf.SetLineWidth(textHeight / 5)
+	idleSurf.SetLineWidth(size / 5)
 	idleSurf.DrawRect(ggweb.Stroke, idleSurf.Rect())
 
 	idleSurf.StyleColor(ggweb.Fill, color.White)

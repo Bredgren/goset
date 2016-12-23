@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"time"
 
+	"github.com/Bredgren/gogame/event"
 	"github.com/Bredgren/gogame/fsm"
 	"github.com/Bredgren/gogame/ggweb"
 )
@@ -25,8 +26,10 @@ import (
 // )
 
 type PlayState struct {
-	SD     SaveData
-	Paused bool
+	SD        SaveData
+	Paused    bool
+	Buttons   []*Button
+	NextState fsm.State
 	// 	deck struct {
 	// 		cards []card
 	// 		rect  geo.Rect
@@ -52,10 +55,20 @@ type PlayState struct {
 	// 	pauseBtns       []*ui.BasicButton
 }
 
-func newPlayState(sd SaveData) *PlayState {
-	return &PlayState{
-		SD: sd,
+func newPlayState(display *ggweb.Surface, sd SaveData) *PlayState {
+	p := PlayState{
+		SD:        sd,
+		NextState: playState,
 	}
+
+	r := display.Rect()
+	p.Buttons = []*Button{
+		newTextButton("Save & Quit", 20, r.Left()+10, r.Bottom()-40, func() {
+			p.NextState = mainMenuState
+		}),
+	}
+
+	return &p
 }
 
 func (p *PlayState) Update(g *game, t, dt time.Duration) fsm.State {
@@ -63,18 +76,35 @@ func (p *PlayState) Update(g *game, t, dt time.Duration) fsm.State {
 		p.SD.PlayTime += dt
 	}
 
-	// p.handleEvents()
+	p.handleEvents()
 	p.draw(g.display, t, dt)
 
 	p.saveState()
 
-	return playState
+	return p.NextState
+}
+
+func (p *PlayState) handleEvents() {
+	for evt := event.Poll(); evt.Type != event.NoEvent; evt = event.Poll() {
+		for _, b := range p.Buttons {
+			b.handleEvent(evt)
+		}
+	}
 }
 
 func (p *PlayState) draw(display *ggweb.Surface, t, dt time.Duration) {
 	display.StyleColor(ggweb.Fill, color.Black)
 	display.DrawRect(ggweb.Fill, display.Rect())
+
 	p.drawPlayTime(display)
+
+	display.SetCursor(ggweb.CursorDefault)
+	for _, b := range p.Buttons {
+		b.drawTo(display)
+		if b.State == buttonHover {
+			display.SetCursor(ggweb.CursorPointer)
+		}
+	}
 }
 
 func (p *PlayState) drawPlayTime(display *ggweb.Surface) {

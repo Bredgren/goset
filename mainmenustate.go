@@ -21,17 +21,18 @@ func newMainMenuState(display *ggweb.Surface) GameState {
 	m := MainMenu{
 		nextState: mainMenuState,
 	}
+	btnSize := 30.0
 	btnX := 40.0
 	btnY := display.Rect().CenterY()
 	m.buttons = []*Button{
-		newTextButton("New Game", btnX, btnY, func() {
+		newTextButton("New Game", btnSize, btnX, btnY, func() {
 			m.nextState = playState
 		}),
-		newTextButton("Leaderboard", btnX, btnY+50, func() {
+		newTextButton("Leaderboard", btnSize, btnX, btnY+50, func() {
 			ggweb.Log("Leaderboard")
 			m.nextState = leaderboardState
 		}),
-		newTextButton("Help", btnX, btnY+100, func() {
+		newTextButton("Help", btnSize, btnX, btnY+100, func() {
 			ggweb.Log("Help")
 			m.nextState = helpState
 		}),
@@ -39,7 +40,7 @@ func newMainMenuState(display *ggweb.Surface) GameState {
 
 	if _, ok := getSaveData(); ok {
 		m.buttons = append(m.buttons,
-			newTextButton("Resume", btnX, btnY-50, func() {
+			newTextButton("Resume", btnSize, btnX, btnY-50, func() {
 				m.nextState = resumeState
 			}))
 	}
