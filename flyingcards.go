@@ -151,6 +151,10 @@ func (g *FlyingCardGroup) Update(t, dt time.Duration) {
 	g.Cards[2].ApplyForce(force02.Times(-1))
 	g.Cards[2].ApplyForce(force12.Times(-1))
 
+	// Try to prevent large speed increases due to leaving the browser tab in suspension
+	if dt > time.Duration(33)*time.Millisecond {
+		dt = time.Duration(33) * time.Millisecond
+	}
 	for i := range g.Cards {
 		g.Cards[i].Update(dt)
 	}

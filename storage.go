@@ -21,11 +21,11 @@ const (
 )
 
 type SaveData struct {
-	PlayTime    time.Duration `json:"play_time"`
-	ActiveCards []card        `json:"active_cards"`
-	Deck        []card        `json:"deck"`
-	Sets        int           `json:"sets"`
-	Errors      int           `json:"errors"`
+	PlayTime time.Duration `json:"play_time"`
+	Deck     []card        `json:"deck"`
+	CardsOut int           `json:"cards_out"`
+	Sets     int           `json:"sets"`
+	Errors   int           `json:"errors"`
 }
 
 func getSaveData() (SaveData, bool) {

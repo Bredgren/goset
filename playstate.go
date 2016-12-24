@@ -3,33 +3,22 @@ package main
 import (
 	"fmt"
 	"image/color"
+	"math/rand"
 	"time"
 
 	"github.com/Bredgren/gogame/event"
 	"github.com/Bredgren/gogame/fsm"
+	"github.com/Bredgren/gogame/geo"
 	"github.com/Bredgren/gogame/ggweb"
 )
 
-// import (
-// 	"fmt"
-// 	"math"
-// 	"math/rand"
-// 	"sort"
-// 	"time"
-
-// 	"github.com/Bredgren/gogame"
-// 	"github.com/Bredgren/gogame/composite"
-// 	"github.com/Bredgren/gogame/event"
-// 	"github.com/Bredgren/gogame/geo"
-// 	"github.com/Bredgren/gogame/key"
-// 	"github.com/Bredgren/gogame/ui"
-// )
-
 type PlayState struct {
-	SD        SaveData
-	Paused    bool
-	Buttons   []*Button
-	NextState fsm.State
+	SD           SaveData
+	LastSaveTime time.Duration
+	Paused       bool
+	Buttons      []*Button
+	NextState    fsm.State
+	CardArea     *CardArea
 	// 	deck struct {
 	// 		cards []card
 	// 		rect  geo.Rect
@@ -59,7 +48,23 @@ func newPlayState(display *ggweb.Surface, sd SaveData) *PlayState {
 	p := PlayState{
 		SD:        sd,
 		NextState: playState,
+		CardArea: &CardArea{
+			Pos:      geo.Vec{X: 40, Y: 40},
+			Rows:     3,
+			CardSize: geo.Vec{X: 70, Y: 100},
+			CardGap:  10,
+			Cards:    make([]*PlayCard, 0),
+		},
 	}
+
+	if p.SD.Deck == nil {
+		p.SD.Deck = p.newDeck()
+	}
+
+	p.CardArea.AddCards(p.SD.Deck[0:3])
+	p.CardArea.AddCards(p.SD.Deck[3:6])
+	p.CardArea.AddCards(p.SD.Deck[6:9])
+	p.CardArea.AddCards(p.SD.Deck[9:12])
 
 	r := display.Rect()
 	p.Buttons = []*Button{
@@ -71,16 +76,37 @@ func newPlayState(display *ggweb.Surface, sd SaveData) *PlayState {
 	return &p
 }
 
+func (p *PlayState) newDeck() []card {
+	tmpDeck := []card{}
+	for _, n := range []count{one, two, three} {
+		for _, f := range []fill{empty, solid, line} {
+			for _, c := range []color.Color{red, green, purple} {
+				for _, s := range []shape{oval, diamond, tilde} {
+					tmpDeck = append(tmpDeck, card{count: n, fill: f, color: c, shape: s})
+				}
+			}
+		}
+	}
+	deck := make([]card, len(tmpDeck))
+	order := rand.Perm(len(tmpDeck))
+	for i, pos := range order {
+		deck[i] = tmpDeck[pos]
+	}
+	return deck
+}
+
 func (p *PlayState) Update(g *game, t, dt time.Duration) fsm.State {
 	if !p.Paused {
 		p.SD.PlayTime += dt
 	}
 
 	p.handleEvents()
+	p.CardArea.Update(t, dt)
+
 	p.draw(g.display, t, dt)
 
-	p.saveState()
-
+	// Force save if changing state
+	p.saveState(t, p.NextState != playState)
 	return p.NextState
 }
 
@@ -97,6 +123,8 @@ func (p *PlayState) draw(display *ggweb.Surface, t, dt time.Duration) {
 	display.DrawRect(ggweb.Fill, display.Rect())
 
 	p.drawPlayTime(display)
+
+	p.CardArea.Draw(display)
 
 	display.SetCursor(ggweb.CursorDefault)
 	for _, b := range p.Buttons {
@@ -119,28 +147,86 @@ func (p *PlayState) drawPlayTime(display *ggweb.Surface) {
 	display.DrawText(ggweb.Fill, timeString, 10, 10)
 }
 
-func (p *PlayState) saveState() {
+func (p *PlayState) saveState(t time.Duration, force bool) {
+	if !force && t-p.LastSaveTime < time.Duration(1)*time.Second {
+		return
+	}
 	if e := setSaveData(&p.SD); e != nil {
 		ggweb.Log("Unable to save progress:", e.Error())
+	}
+	p.LastSaveTime = t
+}
+
+type PlayCard struct {
+	card
+	Surf *ggweb.Surface
+	Pos  geo.Vec
+}
+
+type CardArea struct {
+	Pos      geo.Vec
+	Rows     int
+	CardSize geo.Vec
+	CardGap  float64
+	Cards    []*PlayCard
+}
+
+func (a *CardArea) CardTargetPos(i int) geo.Vec {
+	offset := geo.Vec{X: float64(i / a.Rows), Y: float64(i % a.Rows)}
+	offset.X *= a.CardSize.X + a.CardGap
+	offset.Y *= a.CardSize.Y + a.CardGap
+	return a.Pos.Plus(offset)
+}
+
+// AddCards adds the given cards to the end of the list.
+func (a *CardArea) AddCards(cards []card) {
+	for _, c := range cards {
+		p := PlayCard{
+			card: c,
+			Surf: c.surface(a.CardSize.X, a.CardSize.Y),
+			Pos:  geo.Vec{}, // TODO: deck position
+		}
+		a.Cards = append(a.Cards, &p)
+	}
+}
+
+// ReplaceCards replaces the cards at index idx with the cards.
+func (a *CardArea) ReplaceCards(idx []int, cards []card) {
+	for i, j := range idx {
+		a.Cards[j].card = cards[i]
+		a.Cards[j].Surf = cards[i].surface(a.CardSize.X, a.CardSize.Y)
+		a.Cards[j].Pos = geo.Vec{} // TODO: deck position
+	}
+}
+
+// RemoveCards removes the cards at index idx and slides others down if needed.
+func (a *CardArea) RemoveCards(idx []int) {
+	for _, i := range idx {
+		a.Cards = append(a.Cards[:i], a.Cards[i+1:]...)
+	}
+}
+
+func (a *CardArea) Update(t, dt time.Duration) {
+	for i, card := range a.Cards {
+		pos := card.Pos
+		target := a.CardTargetPos(i)
+		dist := pos.Dist(target)
+		if dist < 2 {
+			card.Pos = target
+			continue
+		}
+		dir := target.Minus(pos).Normalized()
+		card.Pos.Add(dir.Times(dist * 0.1))
+	}
+}
+
+func (a *CardArea) Draw(display *ggweb.Surface) {
+	for _, card := range a.Cards {
+		display.Blit(card.Surf, card.Pos.X, card.Pos.Y)
 	}
 }
 
 // // var playPauseBtn ui.BasicButton
-// // var saveQuitBtn ui.BasicButton
-
-// // const (
-// // 	gameBtnStatePlay ui.ButtonState = iota
-// // 	gameBtnStatePlayHover
-// // 	gameBtnStatePlaySelect
-// // 	gameBtnStatePause
-// // 	gameBtnStatePauseHover
-// // 	gameBtnStatePauseSelect
-// // )
-
-// // func makeButtons() {
-// // 	makePlayPauseBtn()
-// // 	makeSaveQuitBtn()
-// // }
 
 // // func makePlayPauseBtn() {
 // // 	display := gogame.MainDisplay()
